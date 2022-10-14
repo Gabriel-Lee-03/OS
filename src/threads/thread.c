@@ -72,7 +72,7 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
 //Task 1
-static bool less_priority (const struct list_elem *a, 
+bool less_priority (const struct list_elem *a, 
     const struct list_elem *b, void *aux UNUSED);
 
 /* Initializes the threading system by transforming the code
