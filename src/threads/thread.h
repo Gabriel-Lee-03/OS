@@ -95,7 +95,7 @@ struct thread
 
     /* The number of ticks since the OS boosted when the thread should wake
        (Calculated by adding the length of sleep to the value of ticks when put to sleep). */
-    int wake_ticks;                      /* Tick to wake. */
+    int64_t wake_ticks;                      /* Tick to wake. */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
