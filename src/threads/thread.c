@@ -220,11 +220,12 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
-  if (t -> priority > thread_get_priority())
+  if (t -> priority > thread_get_priority()) {
     enum intr_level old_level;
 	  old_level = intr_disable();   /* Disable interrupts */
-    schedule();
-
+    thread_yield();
+    intr_set_level(old_level);
+  }
   return tid;
 }
 
