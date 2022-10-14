@@ -148,7 +148,7 @@ bool compare_wake_ticks_less (const struct list_elem *,
                               const struct list_elem *, void *);
 
 //Task 1
-bool less_priority (const struct list_elem *a, 
+bool higher_priority (const struct list_elem *a, 
     const struct list_elem *b, void *aux UNUSED);
 
 #endif /* threads/thread.h */

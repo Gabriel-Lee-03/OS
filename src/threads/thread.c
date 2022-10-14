@@ -72,7 +72,7 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
 //Task 1
-bool less_priority (const struct list_elem *a, 
+bool higher_priority (const struct list_elem *a, 
     const struct list_elem *b, void *aux UNUSED);
 
 /* Initializes the threading system by transforming the code
@@ -262,7 +262,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_insert_ordered (&ready_list, &t->elem, less_priority, NULL);
+  list_insert_ordered (&ready_list, &t->elem, higher_priority, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -333,18 +333,18 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_insert_ordered (&ready_list, &cur->elem, less_priority, NULL);
+    list_insert_ordered (&ready_list, &cur->elem, higher_priority, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
 }
 
 //Task 1
-bool less_priority (const struct list_elem *a, 
+bool higher_priority (const struct list_elem *a, 
     const struct list_elem *b, void *aux UNUSED) {
   struct thread *thread_a = list_entry(a, struct thread, elem);
   struct thread *thread_b = list_entry(b, struct thread, elem);
-  return ((thread_a -> priority) < (thread_b -> priority));
+  return ((thread_a -> priority) > (thread_b -> priority));
 }
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
