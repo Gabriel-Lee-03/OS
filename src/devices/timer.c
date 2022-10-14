@@ -24,6 +24,11 @@ static int64_t ticks;
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
 
+/* List of all currently sleeping threads, ordered by the tick 
+   at which they will wake. Threads are removed from the list when
+   they wake up. */
+static struct list sleep_list;
+
 static intr_handler_func timer_interrupt;
 static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
@@ -37,6 +42,7 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  list_init (&sleep_list);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -85,15 +91,24 @@ timer_elapsed (int64_t then)
 }
 
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
-   be turned on. */
+   be turned on. 
+   Interrupts are then disabled temporarily since thread_block 
+   requires it. The current thread's wake_ticks is set and the 
+   thread is blocked and added to the sleep_list. */
 void
 timer_sleep (int64_t ticks) 
 {
   int64_t start = timer_ticks ();
+  struct thread *cur;
+  enum intr_level old_level;
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  old_level = intr_disable ();
+  cur = thread_current ();
+  cur->wake_ticks = start + ticks;
+  list_insert_ordered (&sleep_list, &cur->elem, compare_wake_ticks_less, NULL);
+  thread_block ();
+  intr_set_level (old_level);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -152,7 +167,7 @@ timer_udelay (int64_t us)
    Busy waiting wastes CPU cycles, and busy waiting with
    interrupts off for the interval between timer ticks or longer
    will cause timer ticks to be lost.  Thus, use timer_nsleep()
-   instead if interrupts are enabled.*/
+   instead if interrupts are enabled. */
 void
 timer_ndelay (int64_t ns) 
 {
@@ -165,13 +180,32 @@ timer_print_stats (void)
 {
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
-
+
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+
+  struct thread *ptr;
+  
+  /* Verifies list is not empty since list_front has undefined behaviour
+     if the list is empty. */
+  while (!list_empty (&sleep_list)) {
+    /* Get the first thread stored in sleep_list */
+    ptr = list_entry (list_front (&sleep_list), struct thread, elem);
+
+    /* If the wake_ticks of the first thread is larger than ticks, that
+       means no threads need to wake up yet. */
+    if (ptr->wake_ticks > ticks) {
+      break;
+    }
+
+    /* Removes the first thread from sleep_list and unblocks it. */
+    list_pop_front (&sleep_list);
+    thread_unblock (ptr);
+  }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

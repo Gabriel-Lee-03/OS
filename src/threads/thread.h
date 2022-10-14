@@ -93,6 +93,10 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+    /* The number of ticks since the OS boosted when the thread should wake
+       (Calculated by adding the length of sleep to the value of ticks when put to sleep). */
+    int64_t wake_ticks;                      /* Tick to wake. */
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -138,5 +142,8 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+bool compare_wake_ticks_less (const struct list_elem *,
+                              const struct list_elem *, void *);
 
 #endif /* threads/thread.h */

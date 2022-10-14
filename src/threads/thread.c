@@ -408,7 +408,7 @@ thread_get_recent_cpu (void)
   /* Not yet implemented. */
   return 0;
 }
-
+
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
@@ -457,7 +457,7 @@ kernel_thread (thread_func *function, void *aux)
   function (aux);       /* Execute the thread function. */
   thread_exit ();       /* If function() returns, kill the thread. */
 }
-
+
 /* Returns the running thread. */
 struct thread *
 running_thread (void) 
@@ -598,6 +598,17 @@ schedule (void)
   thread_schedule_tail (prev);
 }
 
+/* Compares the wake_ticks of two threads. 
+   For use in list_insert_ordered. */
+bool
+compare_wake_ticks_less (const struct list_elem *a, 
+                        const struct list_elem *b, void *aux)
+{
+  struct thread *ptr1 = list_entry (a, struct thread, elem);
+  struct thread *ptr2 = list_entry (b, struct thread, elem);
+  return ptr1->wake_ticks < ptr2->wake_ticks;
+}
+
 /* Returns a tid to use for a new thread. */
 static tid_t
 allocate_tid (void) 
@@ -611,7 +622,7 @@ allocate_tid (void)
 
   return tid;
 }
-
+
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
