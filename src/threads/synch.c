@@ -66,11 +66,10 @@ sema_down (struct semaphore *sema)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  while (sema->value == 0) 
-    {
-      list_insert_ordered (&sema->waiters, &thread_current ()->elem, higher_priority, NULL);
-      thread_block ();
-    }
+  while (sema->value == 0) {
+    list_insert_ordered (&sema->waiters, &thread_current ()->elem, higher_priority, NULL);
+    thread_block ();
+  }
   sema->value--;
   intr_set_level (old_level);
 }
@@ -113,11 +112,16 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
-  if (!list_empty (&sema->waiters)) 
-    thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem));
-  sema->value++;
   list_sort(&sema -> waiters, higher_priority, NULL);
+  sema->value++;
+  //Task 1
+  if (!list_empty (&sema->waiters)) {
+    struct thread* front_waiting_thread = list_entry (list_pop_front (&sema->waiters), struct thread, elem);
+    thread_unblock (front_waiting_thread);
+    if (front_waiting_thread -> priority > thread_get_priority()) {
+      thread_yield();
+    }
+  }
   intr_set_level (old_level);
 }
 
