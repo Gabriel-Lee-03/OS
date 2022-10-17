@@ -269,6 +269,31 @@ cond_init (struct condition *cond)
   list_init (&cond->waiters);
 }
 
+// Task 1
+/* For 2 semaphores, compare the priority of the 
+   highest priority thread in their waiting list.
+   Return true if priority in a is greater than in b. */
+
+bool higher_priority_sema (struct semaphore_elem *a, 
+    struct semaphore_elem *b, void *aux UNUSED) {
+  int max_priority_a = PRI_MIN;
+  int max_priority_b = PRI_MIN;
+  struct thread* front_thread;
+  /* Check whether the waiting list of semaphore is empty */
+  if (!list_empty(&(&a->semaphore)->waiters)) {
+    /* Get the priority of the front thread in the waiting list */
+    front_thread = list_entry(list_front(&(&a->semaphore)->waiters), 
+        struct thread, elem);
+    max_priority_a = front_thread->priority;
+  }
+  if (!list_empty(&(&b->semaphore)->waiters)) {
+    front_thread = list_entry(list_front(&(&b->semaphore)->waiters), 
+        struct thread, elem);
+    max_priority_b = front_thread->priority;
+  }
+  return (max_priority_a > max_priority_b);
+}
+
 /* Atomically releases LOCK and waits for COND to be signaled by
    some other piece of code.  After COND is signaled, LOCK is
    reacquired before returning.  LOCK must be held before calling
@@ -300,7 +325,8 @@ cond_wait (struct condition *cond, struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
   
   sema_init (&waiter.semaphore, 0);
-  list_insert_ordered (&cond->waiters, &waiter.elem, higher_priority, NULL);
+  // Task 1
+  list_insert_ordered (&cond->waiters, &waiter.elem, higher_priority_sema, NULL);
   lock_release (lock);
   sema_down (&waiter.semaphore);
   lock_acquire (lock);
@@ -320,8 +346,8 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
-
-  list_sort(&cond -> waiters, higher_priority, NULL);
+  // Task 1
+  list_sort(&cond -> waiters, higher_priority_sema, NULL);
   if (!list_empty (&cond->waiters)) {
     sema_up (&list_entry (list_pop_front (&cond->waiters),
                           struct semaphore_elem, elem)->semaphore);
