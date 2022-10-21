@@ -97,6 +97,9 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
 
+  
+
+
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -195,10 +198,6 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
 
-  // Task 1
-  /* Initialize held_locks list */
-  list_init(&t->held_locks);
-
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
      member cannot be observed. */
@@ -224,7 +223,7 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
-  if (t -> priority > thread_get_priority()) {
+  if (t -> effective_priority > thread_get_priority()) {
     enum intr_level old_level;
 	  old_level = intr_disable();   /* Disable interrupts */
     thread_yield();
@@ -348,7 +347,7 @@ bool higher_priority (const struct list_elem *a,
     const struct list_elem *b, void *aux UNUSED) {
   struct thread *thread_a = list_entry(a, struct thread, elem);
   struct thread *thread_b = list_entry(b, struct thread, elem);
-  return ((thread_a -> priority) > (thread_b -> priority));
+  return ((thread_a -> effective_priority) > (thread_b -> effective_priority));
 }
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
@@ -372,10 +371,11 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  thread_current ()->base_priority = new_priority;
+  update_priority();
   if (!list_empty(&ready_list)) {
     if (list_entry(list_front(&ready_list), struct thread, elem) 
-        -> priority > new_priority) 
+        -> effective_priority > new_priority) 
       thread_yield();
   }
 }
@@ -384,7 +384,7 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void) 
 {
-  return thread_current ()->priority;
+  return thread_current ()->effective_priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -503,10 +503,14 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  t->priority = priority;
+  t->base_priority = priority;
   // Task 1
   t->effective_priority = priority;
   t->magic = THREAD_MAGIC;
+
+  // Task 1
+  /* Initialize held_locks list */
+  list_init(&t->held_locks);
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
@@ -656,24 +660,30 @@ bool higher_priority_lock (struct list_elem *a,
     /* Get the priority of the front thread in the waiting list */
     front_thread = list_entry(list_front(&(&lock_a->semaphore)->waiters), 
         struct thread, elem);
-    max_priority_a = front_thread->priority;
+    max_priority_a = front_thread->effective_priority;
   }
   if (!list_empty(&(&lock_b->semaphore)->waiters)) {
     front_thread = list_entry(list_front(&(&lock_b->semaphore)->waiters), 
         struct thread, elem);
-    max_priority_b = front_thread->priority;
+    max_priority_b = front_thread->effective_priority;
   }
   return (max_priority_a > max_priority_b);
 }
 
 // Task 1
 void update_priority() {
-  struct list_elem* max_lock_elem = list_max(&thread_current()->held_locks, higher_priority_lock, NULL);
-  struct lock* max_lock = list_entry(max_lock_elem, struct lock, lock_elem);
-  struct thread* max_thread = list_entry(list_head(&(&max_lock->semaphore)->waiters), struct thread, elem);
-  if (max_thread->effective_priority > thread_current()->priority) {
-    thread_current()->effective_priority = max_thread->effective_priority;
-  };
+  if (!list_empty(&thread_current()->held_locks)) {
+    struct list_elem* max_lock_elem = list_max(&thread_current()->held_locks, higher_priority_lock, NULL);
+    struct lock* max_lock = list_entry(max_lock_elem, struct lock, lock_elem);
+    if (!list_empty(&(&max_lock->semaphore)->waiters)) {
+      struct thread* max_thread = list_entry(list_front(&(&max_lock->semaphore)->waiters), struct thread, elem);
+      if (max_thread->effective_priority > thread_current()->base_priority) {
+        thread_current()->effective_priority = max_thread->effective_priority;
+        return;
+      };
+    }
+  }
+  thread_current()->effective_priority = thread_current()->base_priority;
 }
 
 

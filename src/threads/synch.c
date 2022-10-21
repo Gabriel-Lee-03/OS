@@ -118,7 +118,7 @@ sema_up (struct semaphore *sema)
   if (!list_empty (&sema->waiters)) {
     struct thread* front_waiting_thread = list_entry (list_pop_front (&sema->waiters), struct thread, elem);
     thread_unblock (front_waiting_thread);
-    if (front_waiting_thread -> priority > thread_get_priority()) {
+    if (front_waiting_thread->effective_priority > thread_get_priority()) {
       thread_yield();
     }
   }
@@ -311,12 +311,12 @@ bool higher_priority_sema (struct semaphore_elem *a,
     /* Get the priority of the front thread in the waiting list */
     front_thread = list_entry(list_front(&(&a->semaphore)->waiters), 
         struct thread, elem);
-    max_priority_a = front_thread->priority;
+    max_priority_a = front_thread->effective_priority;
   }
   if (!list_empty(&(&b->semaphore)->waiters)) {
     front_thread = list_entry(list_front(&(&b->semaphore)->waiters), 
         struct thread, elem);
-    max_priority_b = front_thread->priority;
+    max_priority_b = front_thread->effective_priority;
   }
   return (max_priority_a > max_priority_b);
 }
