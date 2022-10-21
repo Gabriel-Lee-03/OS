@@ -114,7 +114,7 @@ sema_up (struct semaphore *sema)
   old_level = intr_disable ();
   list_sort(&sema -> waiters, higher_priority, NULL);
   sema->value++;
-  //Task 1
+  // Task 1
   if (!list_empty (&sema->waiters)) {
     struct thread* front_waiting_thread = list_entry (list_pop_front (&sema->waiters), struct thread, elem);
     thread_unblock (front_waiting_thread);
@@ -205,21 +205,21 @@ lock_acquire (struct lock *lock)
 
   old_level = intr_disable ();
   // Task 1
-  if (lock->holder == NULL) {
-    list_push_back(&thread_current()->held_locks, &lock->lock_elem);
-    thread_current()->waiting_lock = NULL; 
-  }
-  else {
+  if (lock->holder != NULL) {
     if (thread_current()->effective_priority > lock->holder->effective_priority) {
       lock->holder->effective_priority = thread_current()->effective_priority;
     }
     thread_current()->waiting_lock = lock;
   }
 
-  intr_set_level (old_level);
-
   sema_down (&lock->semaphore);
+
+  list_push_back(&thread_current()->held_locks, &lock->lock_elem);
+  thread_current()->waiting_lock = NULL;
+
   lock->holder = thread_current ();
+
+  intr_set_level (old_level);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false

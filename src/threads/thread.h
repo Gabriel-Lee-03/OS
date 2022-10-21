@@ -149,11 +149,11 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-//Task 0
+// Task 0
 bool compare_wake_ticks_less (const struct list_elem *,
                               const struct list_elem *, void *);
 
-//Task 1
+// Task 1
 bool higher_priority (const struct list_elem *a, 
     const struct list_elem *b, void *aux UNUSED);
 

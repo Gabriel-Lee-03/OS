@@ -71,7 +71,7 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
-//Task 1
+// Task 1
 bool higher_priority (const struct list_elem *a, 
     const struct list_elem *b, void *aux UNUSED);
 
@@ -342,7 +342,7 @@ thread_yield (void)
   intr_set_level (old_level);
 }
 
-//Task 1
+// Task 1
 bool higher_priority (const struct list_elem *a, 
     const struct list_elem *b, void *aux UNUSED) {
   struct thread *thread_a = list_entry(a, struct thread, elem);
