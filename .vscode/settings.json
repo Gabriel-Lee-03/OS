@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "intr-stubs.h": "c",
-        "thread": "c"
+        "thread": "c",
+        "mutex": "c",
+        "shared_mutex": "c"
     }
 }
