@@ -72,8 +72,11 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
 // Task 1
-bool higher_priority (const struct list_elem *a, 
-    const struct list_elem *b, void *aux UNUSED);
+bool higher_priority (const struct list_elem *, 
+    const struct list_elem *, void *aux);
+void update_priority(void);
+bool higher_priority_lock (const struct list_elem *, 
+    const struct list_elem *, void *aux);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -96,9 +99,6 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-
-  
-
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -506,6 +506,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->base_priority = priority;
   // Task 1
   t->effective_priority = priority;
+
   t->magic = THREAD_MAGIC;
 
   // Task 1
@@ -646,8 +647,8 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 // Task 1
 // Refactor afterwards to higher_priority_sema
 
-bool higher_priority_lock (struct list_elem *a, 
-    struct list_elem *b, void *aux UNUSED) {
+bool higher_priority_lock (const struct list_elem *a, 
+    const struct list_elem *b, void *aux UNUSED) {
 
   struct lock* lock_a = list_entry(a, struct lock, lock_elem);
   struct lock* lock_b = list_entry(b, struct lock, lock_elem);
@@ -671,7 +672,11 @@ bool higher_priority_lock (struct list_elem *a,
 }
 
 // Task 1
-void update_priority() {
+/* When lock_release() or set_priority() is called, it updates
+   the effective priority of current thread to the higher of
+   its base priority or the highest donated priority. */
+
+void update_priority(void) {
   if (!list_empty(&thread_current()->held_locks)) {
     struct list_elem* max_lock_elem = list_max(&thread_current()->held_locks, higher_priority_lock, NULL);
     struct lock* max_lock = list_entry(max_lock_elem, struct lock, lock_elem);

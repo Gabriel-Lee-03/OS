@@ -285,16 +285,6 @@ struct semaphore_elem
     struct semaphore semaphore;         /* This semaphore. */
   };
 
-/* Initializes condition variable COND.  A condition variable
-   allows one piece of code to signal a condition and cooperating
-   code to receive the signal and act upon it. */
-void
-cond_init (struct condition *cond)
-{
-  ASSERT (cond != NULL);
-
-  list_init (&cond->waiters);
-}
 
 // Task 1
 /* For 2 semaphores, compare the priority of the 
@@ -319,6 +309,17 @@ bool higher_priority_sema (struct semaphore_elem *a,
     max_priority_b = front_thread->effective_priority;
   }
   return (max_priority_a > max_priority_b);
+}
+
+/* Initializes condition variable COND.  A condition variable
+   allows one piece of code to signal a condition and cooperating
+   code to receive the signal and act upon it. */
+void
+cond_init (struct condition *cond)
+{
+  ASSERT (cond != NULL);
+
+  list_init (&cond->waiters);
 }
 
 /* Atomically releases LOCK and waits for COND to be signaled by
