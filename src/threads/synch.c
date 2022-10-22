@@ -207,6 +207,7 @@ lock_acquire (struct lock *lock)
   // Task 1
   if (lock->holder != NULL) {
     if (thread_current()->effective_priority > lock->holder->effective_priority) {
+      printf("LA1. Updated %s priority from %d to %d\n", lock->holder->name, lock->holder->effective_priority, thread_current()->effective_priority);
       lock->holder->effective_priority = thread_current()->effective_priority;
     }
     thread_current()->waiting_lock = lock;

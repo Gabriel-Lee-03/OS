@@ -618,7 +618,7 @@ schedule (void)
    For use in list_insert_ordered. */
 bool
 compare_wake_ticks_less (const struct list_elem *a, 
-                        const struct list_elem *b, void *aux)
+                        const struct list_elem *b, void *aux UNUSED)
 {
   struct thread *ptr1 = list_entry (a, struct thread, elem);
   struct thread *ptr2 = list_entry (b, struct thread, elem);
@@ -678,16 +678,20 @@ bool higher_priority_lock (const struct list_elem *a,
 
 void update_priority(void) {
   if (!list_empty(&thread_current()->held_locks)) {
+    /* Get the lock with the highest priority in its semaphore waiters list */
     struct list_elem* max_lock_elem = list_max(&thread_current()->held_locks, higher_priority_lock, NULL);
     struct lock* max_lock = list_entry(max_lock_elem, struct lock, lock_elem);
     if (!list_empty(&(&max_lock->semaphore)->waiters)) {
+      /* Get the thread with the highest priority */
       struct thread* max_thread = list_entry(list_front(&(&max_lock->semaphore)->waiters), struct thread, elem);
       if (max_thread->effective_priority > thread_current()->base_priority) {
+        printf("UP1. Updated %s priority from %d to %d\n", thread_current()->name, thread_current()->effective_priority, max_thread->effective_priority);
         thread_current()->effective_priority = max_thread->effective_priority;
         return;
       };
     }
   }
+  printf("UP2. Updated %s priority from %d to %d\n", thread_current()->name, thread_current()->effective_priority, thread_current()->base_priority);
   thread_current()->effective_priority = thread_current()->base_priority;
 }
 
