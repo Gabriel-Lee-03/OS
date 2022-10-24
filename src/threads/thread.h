@@ -92,7 +92,7 @@ struct thread
     // Task 1
     int effective_priority;
     int nice;
-    int recent_cpu;
+    int32_t recent_cpu;
     struct lock* waiting_lock;
     struct list held_locks;
 
@@ -118,6 +118,9 @@ struct thread
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "mlfqs". */
 extern bool thread_mlfqs;
+
+// Task 1
+extern int32_t load_avg;
 
 void thread_init (void);
 void thread_start (void);

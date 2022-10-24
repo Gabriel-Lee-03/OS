@@ -409,7 +409,18 @@ thread_get_priority (void)
 
 // Task 1
 int cal_priority(struct thread* t) {
-  
+  int32_t recent_cpu = thread_current()->recent_cpu;
+  int priority = PRI_MAX - convert_fp_to_int_round_zero(recent_cpu / 4) 
+      - (thread_get_nice() * 2);
+  if (priority < PRI_MIN)
+    return PRI_MIN;
+  if (priority > PRI_MAX)
+    return PRI_MAX;  
+  return priority;
+}
+
+int32_t cal_recent_cpu(struct thread* t) {
+  int32_t load_avg = thread_get_load_avg();
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -431,16 +442,15 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return convert_fp_to_int_round_nearest(load_avg * 100);
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return convert_fp_to_int_round_nearest(
+      thread_current()->recent_cpu * 100);
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
