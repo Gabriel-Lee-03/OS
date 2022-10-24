@@ -160,20 +160,22 @@ thread_tick (void)
     kernel_ticks++;
 
   // Task 1
-  /* Update load_avg */
-  if (timer_ticks() % TIMER_FREQ == 0) {
-    load_avg = cal_load_avg();
+  if (thread_mlfqs) {
+    /* Update load_avg */
+    if (timer_ticks() % TIMER_FREQ == 0) {
+      load_avg = cal_load_avg();
+    }
+    /* Update recent_cpu */
+    if (t->status == THREAD_RUNNING) {
+      t->recent_cpu++;
+    }
+    if (timer_ticks() % TIMER_FREQ == 0) {
+      t->recent_cpu = cal_recent_cpu(t);
+    }
+    /* Update priority */
+    if (timer_ticks() % 4 == 0) 
+      thread_set_priority(cal_priority(t));
   }
-  /* Update recent_cpu */
-  if (t->status == THREAD_RUNNING) {
-    t->recent_cpu++;
-  }
-  if (timer_ticks() % TIMER_FREQ == 0) {
-    t->recent_cpu = cal_recent_cpu(t);
-  }
-  /* Update priority */
-  if (timer_ticks() % 4 == 0) 
-    thread_set_priority(cal_priority(t));
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -421,7 +423,6 @@ thread_set_effective_priority (struct thread* t, int new_priority)
       }
     }
   }
-
 }
 
 /* Returns the current thread's priority. */
@@ -772,5 +773,40 @@ void update_priority(void) {
   // printf("UP2. Updated %s priority from %d to %d\n", thread_current()->name, thread_current()->effective_priority, thread_current()->base_priority);
   thread_set_effective_priority(thread_current(), thread_current()->base_priority);
 }
+
+
+// Fixed-point
+
+int32_t convert_int_to_fp(int x)
+{
+   return x * F;
+};
+int convert_fp_to_int_round_zero(int32_t x)
+{
+   return x / F;
+};
+int convert_fp_to_int_round_nearest(int32_t x)
+{
+   if (x >= 0)
+      return (x + F/2) / F;
+   else 
+      return (x - F/2) / F;
+};
+int32_t add_fp_and_int(int32_t x, int n)
+{
+   return x + n * F;
+};
+int32_t sub_int_from_fp(int32_t x, int n)
+{
+   return x - n * F;
+};
+int32_t mul_fp(int32_t x, int32_t y)
+{
+   return (((int64_t)x) * y) / F;
+};
+int32_t div_fp(int32_t x , int32_t y)
+{
+   return (((int64_t)x) * F) / y;
+};
 
 

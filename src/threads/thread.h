@@ -24,6 +24,9 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+// Task 1
+#define F (1<<14)
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -166,39 +169,10 @@ bool higher_priority_lock (const struct list_elem *,
     const struct list_elem *, void *aux);
 
 // Fixed-point
-#define F (1<<14)
-
-int32_t convert_int_to_fp(int x)
-{
-   return x * F;
-};
-int convert_fp_to_int_round_zero(int32_t x)
-{
-   return x / F;
-};
-int convert_fp_to_int_round_nearest(int32_t x)
-{
-   if (x >= 0)
-      return (x + F/2) / F;
-   else 
-      return (x - F/2) / F;
-};
-int32_t add_fp_and_int(int32_t x, int n)
-{
-   return x + n * F;
-};
-int32_t sub_int_from_fp(int32_t x, int n)
-{
-   return x - n * F;
-};
-int32_t mul_fp(int32_t x, int32_t y)
-{
-   return (((int64_t)x) * y) / F;
-};
-int32_t div_fp(int32_t x , int32_t y)
-{
-   return (((int64_t)x) * F) / y;
-};
-
+int convert_fp_to_int_round_nearest(int32_t);
+int32_t add_fp_and_int(int32_t, int);
+int32_t sub_int_from_fp(int32_t, int);
+int32_t mul_fp(int32_t, int32_t);
+int32_t div_fp(int32_t, int32_t);
 
 #endif /* threads/thread.h */
