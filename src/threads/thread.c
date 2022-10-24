@@ -11,6 +11,10 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+
+// Task 1
+#include "devices/timer.h"
+
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -59,6 +63,9 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-mlfqs". */
 bool thread_mlfqs;
 
+// Task 1
+int32_t load_avg;
+
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -105,6 +112,10 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+
+  // Task 1
+  /* Initialise load_avg */
+  load_avg = 0;  
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -147,6 +158,22 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
+
+  // Task 1
+  /* Update load_avg */
+  if (timer_ticks() % TIMER_FREQ == 0) {
+    load_avg = cal_load_avg();
+  }
+  /* Update recent_cpu */
+  if (t->status == THREAD_RUNNING) {
+    t->recent_cpu++;
+  }
+  if (timer_ticks() % TIMER_FREQ == 0) {
+    t->recent_cpu = cal_recent_cpu(t);
+  }
+  /* Update priority */
+  if (timer_ticks() % 4 == 0) 
+    thread_set_priority(cal_priority(t));
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -420,7 +447,19 @@ int cal_priority(struct thread* t) {
 }
 
 int32_t cal_recent_cpu(struct thread* t) {
-  int32_t load_avg = thread_get_load_avg();
+  int nice = t->nice;
+  int32_t coefficient = div_fp(2 * load_avg, add_fp_and_int(2 * load_avg, 1));
+  return add_fp_and_int(mul_fp(coefficient, (t->recent_cpu)), nice);
+}
+
+int32_t cal_load_avg() {
+  int ready_threads = list_size(&ready_list);
+  if (thread_current() != idle_thread) {
+    ready_threads++;
+  }
+  int32_t new_load_avg = convert_int_to_fp(ready_threads) / 60;
+  new_load_avg += load_avg / 60 * 59;
+  return new_load_avg;
 }
 
 /* Sets the current thread's nice value to NICE. */

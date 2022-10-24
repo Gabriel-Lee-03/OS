@@ -120,7 +120,7 @@ struct thread
 extern bool thread_mlfqs;
 
 // Task 1
-extern int32_t load_avg;
+int32_t load_avg;
 
 void thread_init (void);
 void thread_start (void);
