@@ -24,7 +24,7 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
-// Task 1
+// Task 1 BSD
 #define F (1<<14)
 
 /* A kernel thread or user process.
@@ -169,9 +169,9 @@ bool higher_priority_lock (const struct list_elem *,
     const struct list_elem *, void *aux);
 
 // Task 1 BSD
-int cal_priority(struct thread*);
-int32_t cal_recent_cpu(struct thread*);
-int32_t cal_load_avg();
+void recal_priority(struct thread*, void *aux);
+void recal_recent_cpu(struct thread*, void *aux);
+void recal_load_avg();
 
 // Fixed-point
 int convert_fp_to_int_round_nearest(int32_t);

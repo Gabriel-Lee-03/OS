@@ -153,18 +153,20 @@ thread_tick (void)
   if (thread_mlfqs) {
     /* Update load_avg */
     if (timer_ticks() % TIMER_FREQ == 0) {
-      load_avg = cal_load_avg();
+      recal_load_avg();
     }
     /* Update recent_cpu */
     if (t->status == THREAD_RUNNING) {
       t->recent_cpu++;
     }
     if (timer_ticks() % TIMER_FREQ == 0) {
-      t->recent_cpu = cal_recent_cpu(t);
+      thread_foreach(recal_recent_cpu, NULL);
+      thread_foreach(recal_priority, NULL);
     }
-    /* Update priority */
+    /* Update priority
     if (timer_ticks() % 4 == 0) 
-      thread_set_priority(cal_priority(t));
+      thread_foreach(recal_priority, NULL);
+    */
   }
 
   /* Update statistics. */
@@ -434,30 +436,31 @@ thread_get_priority (void)
 }
 
 // Task 1 BSD
-int cal_priority(struct thread* t) {
+void recal_priority(struct thread* t, void *aux UNUSED) {
   int32_t recent_cpu = t->recent_cpu;
   int priority = PRI_MAX - convert_fp_to_int_round_zero(recent_cpu / 4) 
       - (t->nice * 2);
   if (priority < PRI_MIN)
-    return PRI_MIN;
-  if (priority > PRI_MAX)
-    return PRI_MAX;  
-  return priority;
+    t->base_priority = PRI_MIN;
+  else if (priority > PRI_MAX)
+    t->base_priority = PRI_MAX; 
+  else
+    t->base_priority = priority;
 }
 
-int32_t cal_recent_cpu(struct thread* t) {
+void recal_recent_cpu(struct thread* t, void *aux UNUSED) {
   int32_t coefficient = div_fp(2 * load_avg, add_fp_and_int(2 * load_avg, 1));
-  return add_fp_and_int(mul_fp(coefficient, t->recent_cpu), t->nice);
+  t->recent_cpu = add_fp_and_int(mul_fp(coefficient, t->recent_cpu), t->nice);
 }
 
-int32_t cal_load_avg() {
+void recal_load_avg() {
   int ready_threads = list_size(&ready_list);
   if (thread_current() != idle_thread) {
     ready_threads++;
   }
   int32_t new_load_avg = convert_int_to_fp(ready_threads) / 60;
   new_load_avg += load_avg * 59 / 60;
-  return new_load_avg;
+  load_avg = new_load_avg;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -465,7 +468,7 @@ void
 thread_set_nice (int nice) 
 {
   thread_current()->nice = nice;
-  thread_set_priority(cal_priority(thread_current()));
+  recal_priority(thread_current(), NULL);
   if (!list_empty(&ready_list)) {
     /* Get the thread with highest priority in ready_list */
     struct thread* highest_ready_thread = list_entry(list_front(&ready_list), struct thread, elem);
