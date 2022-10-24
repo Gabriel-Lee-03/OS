@@ -386,7 +386,7 @@ thread_set_effective_priority (struct thread* t, int new_priority)
 {
   t->effective_priority = new_priority;
   if (t->waiting_lock != NULL) {
-    if (t->waiting_lock->holder->effective_priority > new_priority) {
+    if (t->waiting_lock->holder->effective_priority < new_priority) {
       thread_set_effective_priority(t->waiting_lock->holder, new_priority);
     }
   }
@@ -680,7 +680,9 @@ bool higher_priority_lock (const struct list_elem *a,
         struct thread, elem);
     max_priority_b = front_thread->effective_priority;
   }
-  return (max_priority_a > max_priority_b);
+
+  // ??
+  return (max_priority_a < max_priority_b);
 }
 
 // Task 1
