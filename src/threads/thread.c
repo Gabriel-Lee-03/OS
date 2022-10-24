@@ -685,13 +685,13 @@ void update_priority(void) {
       /* Get the thread with the highest priority */
       struct thread* max_thread = list_entry(list_front(&(&max_lock->semaphore)->waiters), struct thread, elem);
       if (max_thread->effective_priority > thread_current()->base_priority) {
-        printf("UP1. Updated %s priority from %d to %d\n", thread_current()->name, thread_current()->effective_priority, max_thread->effective_priority);
+        // printf("UP1. Updated %s priority from %d to %d\n", thread_current()->name, thread_current()->effective_priority, max_thread->effective_priority);
         thread_current()->effective_priority = max_thread->effective_priority;
         return;
       };
     }
   }
-  printf("UP2. Updated %s priority from %d to %d\n", thread_current()->name, thread_current()->effective_priority, thread_current()->base_priority);
+  // printf("UP2. Updated %s priority from %d to %d\n", thread_current()->name, thread_current()->effective_priority, thread_current()->base_priority);
   thread_current()->effective_priority = thread_current()->base_priority;
 }
 

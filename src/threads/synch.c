@@ -206,9 +206,9 @@ lock_acquire (struct lock *lock)
   old_level = intr_disable ();
   // Task 1
   if (lock->holder != NULL) {
-    if (thread_current()->effective_priority > lock->holder->effective_priority) {
-      printf("LA1. Updated %s priority from %d to %d\n", lock->holder->name, lock->holder->effective_priority, thread_current()->effective_priority);
-      lock->holder->effective_priority = thread_current()->effective_priority;
+    if (thread_get_priority() > lock->holder->effective_priority) {
+      // printf("LA1. Updated %s priority from %d to %d\n", lock->holder->name, lock->holder->effective_priority, thread_current()->effective_priority);
+      lock->holder->effective_priority = thread_get_priority();
     }
     thread_current()->waiting_lock = lock;
   }
@@ -297,9 +297,9 @@ bool higher_priority_sema (struct semaphore_elem *a,
   int max_priority_a = PRI_MIN;
   int max_priority_b = PRI_MIN;
   struct thread* front_thread;
-  /* Check whether the waiting list of semaphore is empty */
+  // Check whether the waiting list of semaphore is empty 
   if (!list_empty(&(&a->semaphore)->waiters)) {
-    /* Get the priority of the front thread in the waiting list */
+    // Get the priority of the front thread in the waiting list 
     front_thread = list_entry(list_front(&(&a->semaphore)->waiters), 
         struct thread, elem);
     max_priority_a = front_thread->effective_priority;
