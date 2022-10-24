@@ -380,6 +380,18 @@ thread_set_priority (int new_priority)
   }
 }
 
+/* Sets the current thread's priority to NEW_PRIORITY. */
+void
+thread_set_effective_priority (struct thread* t, int new_priority) 
+{
+  t->effective_priority = new_priority;
+  if (t->waiting_lock != NULL) {
+    if (t->waiting_lock->holder->effective_priority > new_priority) {
+      thread_set_effective_priority(t->waiting_lock->holder, new_priority);
+    }
+  }
+}
+
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) 
@@ -686,13 +698,13 @@ void update_priority(void) {
       struct thread* max_thread = list_entry(list_front(&(&max_lock->semaphore)->waiters), struct thread, elem);
       if (max_thread->effective_priority > thread_current()->base_priority) {
         // printf("UP1. Updated %s priority from %d to %d\n", thread_current()->name, thread_current()->effective_priority, max_thread->effective_priority);
-        thread_current()->effective_priority = max_thread->effective_priority;
+        thread_set_effective_priority(thread_current(), max_thread->effective_priority);
         return;
       };
     }
   }
   // printf("UP2. Updated %s priority from %d to %d\n", thread_current()->name, thread_current()->effective_priority, thread_current()->base_priority);
-  thread_current()->effective_priority = thread_current()->base_priority;
+  thread_set_effective_priority(thread_current(), thread_current()->base_priority);
 }
 
 
