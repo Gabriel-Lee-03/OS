@@ -115,7 +115,7 @@ thread_init (void)
 
   // Task 1
   /* Initialise load_avg */
-  load_avg = 0;  
+  load_avg = convert_int_to_fp(0);  
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -149,16 +149,6 @@ thread_tick (void)
 {
   struct thread *t = thread_current ();
 
-  /* Update statistics. */
-  if (t == idle_thread)
-    idle_ticks++;
-#ifdef USERPROG
-  else if (t->pagedir != NULL)
-    user_ticks++;
-#endif
-  else
-    kernel_ticks++;
-
   // Task 1
   if (thread_mlfqs) {
     /* Update load_avg */
@@ -176,6 +166,16 @@ thread_tick (void)
     if (timer_ticks() % 4 == 0) 
       thread_set_priority(cal_priority(t));
   }
+
+  /* Update statistics. */
+  if (t == idle_thread)
+    idle_ticks++;
+#ifdef USERPROG
+  else if (t->pagedir != NULL)
+    user_ticks++;
+#endif
+  else
+    kernel_ticks++;
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -415,14 +415,12 @@ thread_set_priority (int new_priority)
 void
 thread_set_effective_priority (struct thread* t, int new_priority) 
 {
-  if (!thread_mlfqs) {
     t->effective_priority = new_priority;
     if (t->waiting_lock != NULL) {
       if (t->waiting_lock->holder->effective_priority < new_priority) {
         thread_set_effective_priority(t->waiting_lock->holder, new_priority);
       }
     }
-  }
 }
 
 /* Returns the current thread's priority. */
@@ -435,11 +433,11 @@ thread_get_priority (void)
   return thread_current ()->effective_priority;
 }
 
-// Task 1
+// Task 1 BSD
 int cal_priority(struct thread* t) {
-  int32_t recent_cpu = thread_current()->recent_cpu;
+  int32_t recent_cpu = t->recent_cpu;
   int priority = PRI_MAX - convert_fp_to_int_round_zero(recent_cpu / 4) 
-      - (thread_get_nice() * 2);
+      - (t->nice * 2);
   if (priority < PRI_MIN)
     return PRI_MIN;
   if (priority > PRI_MAX)
@@ -448,9 +446,8 @@ int cal_priority(struct thread* t) {
 }
 
 int32_t cal_recent_cpu(struct thread* t) {
-  int nice = t->nice;
   int32_t coefficient = div_fp(2 * load_avg, add_fp_and_int(2 * load_avg, 1));
-  return add_fp_and_int(mul_fp(coefficient, (t->recent_cpu)), nice);
+  return add_fp_and_int(mul_fp(coefficient, t->recent_cpu), t->nice);
 }
 
 int32_t cal_load_avg() {
@@ -459,7 +456,7 @@ int32_t cal_load_avg() {
     ready_threads++;
   }
   int32_t new_load_avg = convert_int_to_fp(ready_threads) / 60;
-  new_load_avg += load_avg / 60 * 59;
+  new_load_avg += load_avg * 59 / 60;
   return new_load_avg;
 }
 
@@ -469,6 +466,13 @@ thread_set_nice (int nice)
 {
   thread_current()->nice = nice;
   thread_set_priority(cal_priority(thread_current()));
+  if (!list_empty(&ready_list)) {
+    /* Get the thread with highest priority in ready_list */
+    struct thread* highest_ready_thread = list_entry(list_front(&ready_list), struct thread, elem);
+    if (thread_get_priority() < highest_ready_thread->base_priority) {
+      thread_yield();
+    }
+  }
 }
 
 /* Returns the current thread's nice value. */
@@ -585,6 +589,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
 
   // Task 1
+  /* Initialize nice and recent_cpu */
   t->nice = 0;
   t->recent_cpu = 0;
   /* Initialize held_locks list */
@@ -777,9 +782,9 @@ void update_priority(void) {
 
 // Fixed-point
 
-int32_t convert_int_to_fp(int x)
+int32_t convert_int_to_fp(int n)
 {
-   return x * F;
+   return n * F;
 };
 int convert_fp_to_int_round_zero(int32_t x)
 {

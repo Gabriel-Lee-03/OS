@@ -168,6 +168,11 @@ void update_priority(void);
 bool higher_priority_lock (const struct list_elem *, 
     const struct list_elem *, void *aux);
 
+// Task 1 BSD
+int cal_priority(struct thread*);
+int32_t cal_recent_cpu(struct thread*);
+int32_t cal_load_avg();
+
 // Fixed-point
 int convert_fp_to_int_round_nearest(int32_t);
 int32_t add_fp_and_int(int32_t, int);
