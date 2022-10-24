@@ -91,6 +91,8 @@ struct thread
 
     // Task 1
     int effective_priority;
+    int nice;
+    int recent_cpu;
     struct lock* waiting_lock;
     struct list held_locks;
 
@@ -159,5 +161,14 @@ bool higher_priority (const struct list_elem *,
 void update_priority(void);
 bool higher_priority_lock (const struct list_elem *, 
     const struct list_elem *, void *aux);
+
+// Fixed-point
+int32_t convert_int_to_fp(int);
+int convert_fp_to_int_round_zero(int32_t);
+int convert_fp_to_int_round_nearest(int32_t);
+int32_t add_fp_and_int(int32_t, int);
+int32_t sub_int_from_fp(int32_t, int);
+int32_t mul_fp(int32_t, int32_t);
+int32_t div_fp(int32_t, int32_t);
 
 #endif /* threads/thread.h */

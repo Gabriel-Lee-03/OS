@@ -372,11 +372,13 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->base_priority = new_priority;
-  update_priority();
-  if (!list_empty(&ready_list)) {
-    if (list_entry(list_front(&ready_list), struct thread, elem) 
-        -> effective_priority > new_priority) 
-      thread_yield();
+  if (!thread_mlfqs) {
+    update_priority();
+    if (!list_empty(&ready_list)) {
+      if (list_entry(list_front(&ready_list), struct thread, elem) 
+          -> effective_priority > new_priority) 
+        thread_yield();
+    }
   }
 }
 
@@ -384,34 +386,45 @@ thread_set_priority (int new_priority)
 void
 thread_set_effective_priority (struct thread* t, int new_priority) 
 {
-  t->effective_priority = new_priority;
-  if (t->waiting_lock != NULL) {
-    if (t->waiting_lock->holder->effective_priority < new_priority) {
-      thread_set_effective_priority(t->waiting_lock->holder, new_priority);
+  if (!thread_mlfqs) {
+    t->effective_priority = new_priority;
+    if (t->waiting_lock != NULL) {
+      if (t->waiting_lock->holder->effective_priority < new_priority) {
+        thread_set_effective_priority(t->waiting_lock->holder, new_priority);
+      }
     }
   }
+
 }
 
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) 
 {
+  if (thread_mlfqs) {
+    return thread_current ()->base_priority;
+  }
   return thread_current ()->effective_priority;
+}
+
+// Task 1
+int cal_priority(struct thread* t) {
+  
 }
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
+thread_set_nice (int nice) 
 {
-  /* Not yet implemented. */
+  thread_current()->nice = nice;
+  thread_set_priority(cal_priority(thread_current()));
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current()->nice;
 }
 
 /* Returns 100 times the system load average. */
@@ -522,6 +535,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
 
   // Task 1
+  t->nice = 0;
+  t->recent_cpu = 0;
   /* Initialize held_locks list */
   list_init(&t->held_locks);
 
