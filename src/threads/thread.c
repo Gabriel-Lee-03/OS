@@ -158,15 +158,14 @@ thread_tick (void)
     /* Update recent_cpu */
     if (t->status == THREAD_RUNNING) {
       t->recent_cpu++;
+      if (timer_ticks() % 4 == 0) {
+        recal_priority(t, NULL);
+      }
     }
     if (timer_ticks() % TIMER_FREQ == 0) {
       thread_foreach(recal_recent_cpu, NULL);
       thread_foreach(recal_priority, NULL);
     }
-    /* Update priority
-    if (timer_ticks() % 4 == 0) 
-      thread_foreach(recal_priority, NULL);
-    */
   }
 
   /* Update statistics. */
