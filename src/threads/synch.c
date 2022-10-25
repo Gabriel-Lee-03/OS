@@ -205,18 +205,22 @@ lock_acquire (struct lock *lock)
 
   old_level = intr_disable ();
   // Task 1
-  if (lock->holder != NULL) {
-    if (thread_get_priority() > lock->holder->effective_priority) {
-      // printf("LA1. Updated %s priority from %d to %d\n", lock->holder->name, lock->holder->effective_priority, thread_current()->effective_priority);
-      thread_set_effective_priority(lock->holder, thread_get_priority());
+  if(!thread_mlfqs) {
+    if (lock->holder != NULL) {
+      if (thread_get_priority() > lock->holder->effective_priority) {
+        // printf("LA1. Updated %s priority from %d to %d\n", lock->holder->name, lock->holder->effective_priority, thread_current()->effective_priority);
+        thread_set_effective_priority(lock->holder, thread_get_priority());
+      }
+      thread_current()->waiting_lock = lock;
     }
-    thread_current()->waiting_lock = lock;
   }
 
   sema_down (&lock->semaphore);
 
-  list_push_back(&thread_current()->held_locks, &lock->lock_elem);
-  thread_current()->waiting_lock = NULL;
+  if(!thread_mlfqs) {
+    list_push_back(&thread_current()->held_locks, &lock->lock_elem);
+    thread_current()->waiting_lock = NULL;
+  }
 
   lock->holder = thread_current ();
 
@@ -259,8 +263,10 @@ lock_release (struct lock *lock)
   old_level = intr_disable ();
 
   // Task 1
-  list_remove(&lock->lock_elem);
-  update_priority();
+  if(!thread_mlfqs) {
+    list_remove(&lock->lock_elem);
+    update_priority();
+  }
 
   intr_set_level (old_level);
 
@@ -302,12 +308,18 @@ bool higher_priority_sema (struct semaphore_elem *a,
     // Get the priority of the front thread in the waiting list 
     front_thread = list_entry(list_front(&(&a->semaphore)->waiters), 
         struct thread, elem);
-    max_priority_a = front_thread->effective_priority;
+    if (thread_mlfqs)
+      max_priority_a = front_thread->base_priority;
+    else
+      max_priority_a = front_thread->effective_priority;
   }
   if (!list_empty(&(&b->semaphore)->waiters)) {
     front_thread = list_entry(list_front(&(&b->semaphore)->waiters), 
         struct thread, elem);
-    max_priority_b = front_thread->effective_priority;
+    if (thread_mlfqs)
+      max_priority_b = front_thread->base_priority;
+    else
+      max_priority_b = front_thread->effective_priority;
   }
   return (max_priority_a > max_priority_b);
 }

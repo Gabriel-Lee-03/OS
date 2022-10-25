@@ -156,10 +156,13 @@ thread_tick (void)
       recal_load_avg();
     }
     /* Update recent_cpu */
-    if (t->status == THREAD_RUNNING) {
-      t->recent_cpu++;
+    if (t != idle_thread) {
+      t->recent_cpu = add_fp_and_int(t->recent_cpu, 1);
+      //printf("In thread tick: Thread %s recent_cpu %d \n", t->name, t->recent_cpu);
       if (timer_ticks() % 4 == 0) {
         recal_priority(t, NULL);
+        //printf("Timer: %d\n", timer_ticks());
+        //printf("Thread %s priority = %d\n", t->name, t->base_priority);
       }
     }
     if (timer_ticks() % TIMER_FREQ == 0) {
@@ -377,6 +380,9 @@ bool higher_priority (const struct list_elem *a,
     const struct list_elem *b, void *aux UNUSED) {
   struct thread *thread_a = list_entry(a, struct thread, elem);
   struct thread *thread_b = list_entry(b, struct thread, elem);
+  if (thread_mlfqs) {
+    return ((thread_a -> base_priority) > (thread_b -> base_priority));
+  }
   return ((thread_a -> effective_priority) > (thread_b -> effective_priority));
 }
 
@@ -448,8 +454,12 @@ void recal_priority(struct thread* t, void *aux UNUSED) {
 }
 
 void recal_recent_cpu(struct thread* t, void *aux UNUSED) {
+  //printf("Timer: %d, ", timer_ticks());
+  //printf("original recent_cpu: %d.%02d, ", convert_fp_to_int_round_nearest(t->recent_cpu * 100) / 100, convert_fp_to_int_round_nearest(t->recent_cpu * 100) % 100);
   int32_t coefficient = div_fp(2 * load_avg, add_fp_and_int(2 * load_avg, 1));
+  //printf("coefficient: %d.%02d, ", convert_fp_to_int_round_nearest(coefficient * 100) / 100, convert_fp_to_int_round_nearest(coefficient * 100) % 100);
   t->recent_cpu = add_fp_and_int(mul_fp(coefficient, t->recent_cpu), t->nice);
+  //printf("recent_cpu: %d.%02d\n", convert_fp_to_int_round_nearest(t->recent_cpu * 100) / 100, convert_fp_to_int_round_nearest(t->recent_cpu * 100) % 100);
 }
 
 void recal_load_avg() {
@@ -457,9 +467,13 @@ void recal_load_avg() {
   if (thread_current() != idle_thread) {
     ready_threads++;
   }
+  //printf("Timer: %d, ", timer_ticks());
+  //printf("ready_threads: %d, ", ready_threads);
   int32_t new_load_avg = convert_int_to_fp(ready_threads) / 60;
+  //printf("new_load_avg: %d.%02d, ", convert_fp_to_int_round_nearest(new_load_avg * 100) / 100, convert_fp_to_int_round_nearest(new_load_avg * 100) % 100);
   new_load_avg += load_avg * 59 / 60;
   load_avg = new_load_avg;
+  //printf("load_avg: %d.%02d\n", convert_fp_to_int_round_nearest(load_avg * 100) / 100, convert_fp_to_int_round_nearest(load_avg * 100) % 100);
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -745,12 +759,18 @@ bool higher_priority_lock (const struct list_elem *a,
     /* Get the priority of the front thread in the waiting list */
     front_thread = list_entry(list_front(&(&lock_a->semaphore)->waiters), 
         struct thread, elem);
-    max_priority_a = front_thread->effective_priority;
+    if (thread_mlfqs)
+      max_priority_a = front_thread->base_priority;
+    else
+      max_priority_a = front_thread->effective_priority;
   }
   if (!list_empty(&(&lock_b->semaphore)->waiters)) {
     front_thread = list_entry(list_front(&(&lock_b->semaphore)->waiters), 
         struct thread, elem);
-    max_priority_b = front_thread->effective_priority;
+    if (thread_mlfqs)
+      max_priority_b = front_thread->base_priority;
+    else
+      max_priority_b = front_thread->effective_priority;
   }
 
   // ??
