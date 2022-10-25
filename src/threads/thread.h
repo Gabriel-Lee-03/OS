@@ -164,6 +164,8 @@ bool compare_wake_ticks_less (const struct list_elem *,
 // Task 1
 bool less_priority_thread (const struct list_elem *, 
     const struct list_elem *, void *aux);
+bool higher_priority_thread (const struct list_elem *, 
+    const struct list_elem *, void *aux);
 void update_priority(void);
 bool less_priority_lock (const struct list_elem *, 
     const struct list_elem *, void *aux);
