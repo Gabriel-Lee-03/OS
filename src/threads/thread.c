@@ -79,10 +79,10 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
 // Task 1
-bool higher_priority (const struct list_elem *, 
+bool less_priority_thread (const struct list_elem *, 
     const struct list_elem *, void *aux);
 void update_priority(void);
-bool higher_priority_lock (const struct list_elem *, 
+bool less_priority_lock (const struct list_elem *, 
     const struct list_elem *, void *aux);
 
 /* Initializes the threading system by transforming the code
@@ -298,7 +298,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_insert_ordered (&ready_list, &t->elem, higher_priority, NULL);
+  list_insert_ordered (&ready_list, &t->elem, less_priority_thread, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -369,21 +369,21 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_insert_ordered (&ready_list, &cur->elem, higher_priority, NULL);
+    list_insert_ordered (&ready_list, &cur->elem, less_priority_thread, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
 }
 
 // Task 1
-bool higher_priority (const struct list_elem *a, 
+bool less_priority_thread (const struct list_elem *a, 
     const struct list_elem *b, void *aux UNUSED) {
   struct thread *thread_a = list_entry(a, struct thread, elem);
   struct thread *thread_b = list_entry(b, struct thread, elem);
   if (thread_mlfqs) {
-    return ((thread_a -> base_priority) > (thread_b -> base_priority));
+    return ((thread_a -> base_priority) < (thread_b -> base_priority));
   }
-  return ((thread_a -> effective_priority) > (thread_b -> effective_priority));
+  return ((thread_a -> effective_priority) < (thread_b -> effective_priority));
 }
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
@@ -411,7 +411,7 @@ thread_set_priority (int new_priority)
   if (!thread_mlfqs) {
     update_priority();
     if (!list_empty(&ready_list)) {
-      if (list_entry(list_front(&ready_list), struct thread, elem) 
+      if (list_entry(list_back(&ready_list), struct thread, elem) 
           -> effective_priority > new_priority) 
         thread_yield();
     }
@@ -484,7 +484,7 @@ thread_set_nice (int nice)
   recal_priority(thread_current(), NULL);
   if (!list_empty(&ready_list)) {
     /* Get the thread with highest priority in ready_list */
-    struct thread* highest_ready_thread = list_entry(list_front(&ready_list), struct thread, elem);
+    struct thread* highest_ready_thread = list_entry(list_back(&ready_list), struct thread, elem);
     if (thread_get_priority() < highest_ready_thread->base_priority) {
       thread_yield();
     }
@@ -640,7 +640,7 @@ next_thread_to_run (void)
   if (list_empty (&ready_list))
     return idle_thread;
   else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    return list_entry (list_pop_back (&ready_list), struct thread, elem);
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -743,9 +743,9 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 
 // Task 1
-// Refactor afterwards to higher_priority_sema
+// Refactor afterwards to less_priority_sema
 
-bool higher_priority_lock (const struct list_elem *a, 
+bool less_priority_lock (const struct list_elem *a, 
     const struct list_elem *b, void *aux UNUSED) {
 
   struct lock* lock_a = list_entry(a, struct lock, lock_elem);
@@ -757,7 +757,7 @@ bool higher_priority_lock (const struct list_elem *a,
   /* Check whether the waiting list of semaphore is empty */
   if (!list_empty(&(&lock_a->semaphore)->waiters)) {
     /* Get the priority of the front thread in the waiting list */
-    front_thread = list_entry(list_front(&(&lock_a->semaphore)->waiters), 
+    front_thread = list_entry(list_max((&(&lock_a->semaphore)->waiters), less_priority_thread, NULL), 
         struct thread, elem);
     if (thread_mlfqs)
       max_priority_a = front_thread->base_priority;
@@ -765,15 +765,13 @@ bool higher_priority_lock (const struct list_elem *a,
       max_priority_a = front_thread->effective_priority;
   }
   if (!list_empty(&(&lock_b->semaphore)->waiters)) {
-    front_thread = list_entry(list_front(&(&lock_b->semaphore)->waiters), 
+    front_thread = list_entry(list_max((&(&lock_b->semaphore)->waiters), less_priority_thread, NULL), 
         struct thread, elem);
     if (thread_mlfqs)
       max_priority_b = front_thread->base_priority;
     else
       max_priority_b = front_thread->effective_priority;
   }
-
-  // ??
   return (max_priority_a < max_priority_b);
 }
 
@@ -785,11 +783,11 @@ bool higher_priority_lock (const struct list_elem *a,
 void update_priority(void) {
   if (!list_empty(&thread_current()->held_locks)) {
     /* Get the lock with the highest priority in its semaphore waiters list */
-    struct list_elem* max_lock_elem = list_max(&thread_current()->held_locks, higher_priority_lock, NULL);
+    struct list_elem* max_lock_elem = list_max(&thread_current()->held_locks, less_priority_lock, NULL);
     struct lock* max_lock = list_entry(max_lock_elem, struct lock, lock_elem);
     if (!list_empty(&(&max_lock->semaphore)->waiters)) {
       /* Get the thread with the highest priority */
-      struct thread* max_thread = list_entry(list_front(&(&max_lock->semaphore)->waiters), struct thread, elem);
+      struct thread* max_thread = list_entry(list_max((&(&max_lock->semaphore)->waiters), less_priority_thread, NULL), struct thread, elem);
       if (max_thread->effective_priority > thread_current()->base_priority) {
         // printf("UP1. Updated %s priority from %d to %d\n", thread_current()->name, thread_current()->effective_priority, max_thread->effective_priority);
         thread_set_effective_priority(thread_current(), max_thread->effective_priority);
@@ -804,35 +802,28 @@ void update_priority(void) {
 
 // Fixed-point
 
-int32_t convert_int_to_fp(int n)
-{
+int32_t convert_int_to_fp(int n) {
    return n * F;
 };
-int convert_fp_to_int_round_zero(int32_t x)
-{
+int convert_fp_to_int_round_zero(int32_t x) {
    return x / F;
 };
-int convert_fp_to_int_round_nearest(int32_t x)
-{
+int convert_fp_to_int_round_nearest(int32_t x) {
    if (x >= 0)
       return (x + F/2) / F;
    else 
       return (x - F/2) / F;
 };
-int32_t add_fp_and_int(int32_t x, int n)
-{
+int32_t add_fp_and_int(int32_t x, int n) {
    return x + n * F;
 };
-int32_t sub_int_from_fp(int32_t x, int n)
-{
+int32_t sub_int_from_fp(int32_t x, int n) {
    return x - n * F;
 };
-int32_t mul_fp(int32_t x, int32_t y)
-{
+int32_t mul_fp(int32_t x, int32_t y) {
    return (((int64_t)x) * y) / F;
 };
-int32_t div_fp(int32_t x , int32_t y)
-{
+int32_t div_fp(int32_t x , int32_t y) {
    return (((int64_t)x) * F) / y;
 };
 

@@ -162,10 +162,10 @@ bool compare_wake_ticks_less (const struct list_elem *,
                               const struct list_elem *, void *);
 
 // Task 1
-bool higher_priority (const struct list_elem *, 
+bool less_priority_thread (const struct list_elem *, 
     const struct list_elem *, void *aux);
 void update_priority(void);
-bool higher_priority_lock (const struct list_elem *, 
+bool less_priority_lock (const struct list_elem *, 
     const struct list_elem *, void *aux);
 
 // Task 1 BSD
