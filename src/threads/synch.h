@@ -44,6 +44,14 @@ void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
 
+// Task 1
+bool less_priority_sema (const struct semaphore *, 
+    const struct semaphore *, void *aux);
+bool less_priority_sema_elem (const struct list_elem *, 
+    const struct list_elem *, void *aux);
+bool less_priority_lock_elem (const struct list_elem *, 
+    const struct list_elem *, void *aux);
+
 /* Optimization barrier.
 
    The compiler will not reorder operations across an

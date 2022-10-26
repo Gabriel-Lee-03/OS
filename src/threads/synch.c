@@ -32,6 +32,14 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+bool less_priority_sema (const struct semaphore *, 
+    const struct semaphore *, void *aux);
+bool less_priority_sema_elem (const struct list_elem *, 
+    const struct list_elem *, void *aux);
+bool less_priority_lock_elem (const struct list_elem *, 
+    const struct list_elem *, void *aux);
+
+
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -217,7 +225,6 @@ lock_acquire (struct lock *lock)
   if(!thread_mlfqs) {
     if (lock->holder != NULL) {
       if (thread_get_priority() > lock->holder->effective_priority) {
-        // printf("LA1. Updated %s priority from %d to %d\n", lock->holder->name, lock->holder->effective_priority, thread_current()->effective_priority);
         thread_set_effective_priority(lock->holder, thread_get_priority());
       }
       thread_current()->waiting_lock = lock;
@@ -301,38 +308,6 @@ struct semaphore_elem
     struct semaphore semaphore;         /* This semaphore. */
   };
 
-
-// Task 1
-/* For 2 semaphores, compare the priority of the 
-   highest priority thread in their waiting list.
-   Return true if priority in a is less than in b. */
-
-bool less_priority_sema (struct semaphore_elem *a, 
-    struct semaphore_elem *b, void *aux UNUSED) {
-  int max_priority_a = PRI_MIN;
-  int max_priority_b = PRI_MIN;
-  struct thread* max_thread;
-  // Check whether the waiting list of semaphore is empty 
-  if (!list_empty(&(&a->semaphore)->waiters)) {
-    // Get the priority of the front thread in the waiting list 
-    max_thread = list_entry(list_max((&(&a->semaphore)->waiters), compare_priority_thread, false), 
-        struct thread, elem);
-    if (thread_mlfqs)
-      max_priority_a = max_thread->base_priority;
-    else
-      max_priority_a = max_thread->effective_priority;
-  }
-  if (!list_empty(&(&b->semaphore)->waiters)) {
-    max_thread = list_entry(list_max((&(&b->semaphore)->waiters), compare_priority_thread, false), 
-        struct thread, elem);
-    if (thread_mlfqs)
-      max_priority_b = max_thread->base_priority;
-    else
-      max_priority_b = max_thread->effective_priority;
-  }
-  return (max_priority_a < max_priority_b);
-}
-
 /* Initializes condition variable COND.  A condition variable
    allows one piece of code to signal a condition and cooperating
    code to receive the signal and act upon it. */
@@ -397,9 +372,9 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
   // Task 1
-  // list_sort(&cond -> waiters, less_priority_sema, NULL);
+  // list_sort(&cond -> waiters, less_priority_sema_elem, NULL);
   if (!list_empty (&cond->waiters)) {
-    struct semaphore_elem* max_sema_elem = list_max(&cond->waiters, less_priority_sema, NULL);
+    struct semaphore_elem* max_sema_elem = list_max(&cond->waiters, less_priority_sema_elem, NULL);
     list_remove(max_sema_elem);   
     sema_up(&max_sema_elem->semaphore);
 
@@ -420,4 +395,50 @@ cond_broadcast (struct condition *cond, struct lock *lock)
 
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
+}
+
+// Task 1
+/* For two semaphores A and B, compare the priorities of the 
+   highest priority waiting thread in their waiters list. Return 
+   true if that of A is less than B, false otherwise. */
+bool less_priority_sema (const struct semaphore *a, 
+    const struct semaphore *b, void *aux UNUSED) {
+  int max_priority_a = PRI_MIN;
+  int max_priority_b = PRI_MIN;
+  struct thread* max_thread;
+  /* Check whether the waiting list of semaphore is empty */
+  if (!list_empty(&a->waiters)) {
+    /* Get the priority of the highest priority thread in the waiting list */
+    max_thread = list_entry(list_max(&a->waiters, compare_priority_thread, false), 
+        struct thread, elem);
+    if (thread_mlfqs)
+      max_priority_a = max_thread->base_priority;
+    else
+      max_priority_a = max_thread->effective_priority;
+  }
+  if (!list_empty(&b->waiters)) {
+    max_thread = list_entry(list_max(&b->waiters, compare_priority_thread, false), 
+        struct thread, elem);
+    if (thread_mlfqs)
+      max_priority_b = max_thread->base_priority;
+    else
+      max_priority_b = max_thread->effective_priority;
+  }
+  return (max_priority_a < max_priority_b);
+}
+
+/* Comparing elem of semaphore_elem */
+bool less_priority_sema_elem (const struct list_elem *a, 
+    const struct list_elem *b, void *aux UNUSED) {
+  struct semaphore_elem* sema_elem_a = list_entry(a, struct semaphore_elem, elem);
+  struct semaphore_elem* sema_elem_b = list_entry(b, struct semaphore_elem, elem);
+  return less_priority_sema(&sema_elem_a->semaphore, &sema_elem_b->semaphore, NULL);
+}
+
+/* Comparing lock_elem of lock */
+bool less_priority_lock_elem (const struct list_elem *a, 
+    const struct list_elem *b, void *aux UNUSED) {
+  struct lock* lock_a = list_entry(a, struct lock, lock_elem);
+  struct lock* lock_b = list_entry(b, struct lock, lock_elem);
+  return less_priority_sema(&lock_a->semaphore, &lock_b->semaphore, NULL);
 }
