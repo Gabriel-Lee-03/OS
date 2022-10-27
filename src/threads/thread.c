@@ -268,6 +268,8 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  // Task 1
+  /* Check if priority of thread is higher than current thread */
   if (t -> effective_priority > thread_get_priority()) {
     enum intr_level old_level;
 	  old_level = intr_disable();   /* Disable interrupts */
@@ -310,6 +312,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
+  // Task 1
   list_insert_ordered (&ready_list, &t->elem, compare_priority_thread, true);
   t->status = THREAD_READY;
   intr_set_level (old_level);
@@ -408,6 +411,7 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+  // Task 1
   thread_current ()->base_priority = new_priority;
   if (!thread_mlfqs) {
     update_priority();
@@ -421,6 +425,7 @@ thread_set_priority (int new_priority)
   }
 }
 
+// Task 1
 /* Sets the effective priority of thread t to new_priority. */
 void thread_set_effective_priority (struct thread* t, int new_priority) {
   t->effective_priority = new_priority;
@@ -437,6 +442,7 @@ void thread_set_effective_priority (struct thread* t, int new_priority) {
 int
 thread_get_priority (void) 
 {
+  // Task 1
   if (thread_mlfqs)
     return thread_current ()->base_priority;
   else
@@ -713,16 +719,6 @@ schedule (void)
   thread_schedule_tail (prev);
 }
 
-// Task 0
-/* Compares the wake_ticks of two threads. 
-   For use in list_insert_ordered. */
-bool compare_wake_ticks_less (const struct list_elem *a, 
-    const struct list_elem *b, void *aux UNUSED) {
-  struct thread *ptr1 = list_entry (a, struct thread, elem);
-  struct thread *ptr2 = list_entry (b, struct thread, elem);
-  return ptr1->wake_ticks < ptr2->wake_ticks;
-}
-
 /* Returns a tid to use for a new thread. */
 static tid_t
 allocate_tid (void) 
@@ -740,6 +736,16 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+// Task 0
+/* Compares the wake_ticks of two threads. 
+   For use in list_insert_ordered. */
+bool compare_wake_ticks_less (const struct list_elem *a, 
+    const struct list_elem *b, void *aux UNUSED) {
+  struct thread *ptr1 = list_entry (a, struct thread, elem);
+  struct thread *ptr2 = list_entry (b, struct thread, elem);
+  return ptr1->wake_ticks < ptr2->wake_ticks;
+}
 
 // Task 1
 /* For two threads A and B, compare the priorities. 
