@@ -25,7 +25,9 @@ typedef int tid_t;
 #define PRI_MAX 63                      /* Highest priority. */
 
 // Task 1 BSD
-#define F (1<<14)
+/* For fixed point real arithmetic, the constant ratio from integer 
+   to 32-bit fixed point number. */
+#define F (1<<14)                       
 
 /* A kernel thread or user process.
 
@@ -86,44 +88,42 @@ typedef int tid_t;
 struct thread
   {
     /* Owned by thread.c. */
-    tid_t tid;                          /* Thread identifier. */
-    enum thread_status status;          /* Thread state. */
-    char name[16];                      /* Name (for debugging purposes). */
-    uint8_t *stack;                     /* Saved stack pointer. */
-    int base_priority;                  /* Priority. */
+    tid_t tid;                      /* Thread identifier. */
+    enum thread_status status;      /* Thread state. */
+    char name[16];                  /* Name (for debugging purposes). */
+    uint8_t *stack;                 /* Saved stack pointer. */
+    // Task 1
+    int base_priority;              /* Priority without donation */
 
     // Task 1
-    int effective_priority;
-    int nice;
-    int32_t recent_cpu;
-    struct lock* waiting_lock;
-    struct list held_locks;
+    int effective_priority;         /* Priority after donation */              
+    int nice;                       /* Nice value */
+    int32_t recent_cpu;             /* Estimate of recently used CPU time */
+    struct lock* waiting_lock;      /* A lock that the thread is waiting */
+    struct list held_locks;         /* A list of locks that the thread is holding */
 
-    struct list_elem allelem;           /* List element for all threads list. */
+    struct list_elem allelem;       /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
-    struct list_elem elem;              /* List element. */
+    struct list_elem elem;          /* List element. */
 
     /* The number of ticks since the OS boosted when the thread should wake
        (Calculated by adding the length of sleep to the value of ticks when put to sleep). */
-    int64_t wake_ticks;                      /* Tick to wake. */
+    int64_t wake_ticks;             /* Tick to wake. */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
-    uint32_t *pagedir;                  /* Page directory. */
+    uint32_t *pagedir;              /* Page directory. */
 #endif
 
     /* Owned by thread.c. */
-    unsigned magic;                     /* Detects stack overflow. */
+    unsigned magic;                 /* Detects stack overflow. */
   };
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "mlfqs". */
-extern bool thread_mlfqs;
-
-// Task 1
-int32_t load_avg;
+extern bool thread_mlfqs;                    
 
 void thread_init (void);
 void thread_start (void);
@@ -166,16 +166,16 @@ bool compare_priority_thread (const struct list_elem *,
     const struct list_elem *, bool);
 void update_priority(void);
 
-// Task 1 BSD
-void recal_priority(struct thread*, void *aux);
-void recal_recent_cpu(struct thread*, void *aux);
-void recal_load_avg();
+// // Task 1 BSD
+// void recal_priority(struct thread*, void *aux);
+// void recal_recent_cpu(struct thread*, void *aux);
+// void recal_load_avg();
 
-// Fixed-point
-int convert_fp_to_int_round_nearest(int32_t);
-int32_t add_fp_and_int(int32_t, int);
-int32_t sub_int_from_fp(int32_t, int);
-int32_t mul_fp(int32_t, int32_t);
-int32_t div_fp(int32_t, int32_t);
+// // Fixed-point
+// int convert_fp_to_int_round_nearest(int32_t);
+// int32_t add_fp_and_int(int32_t, int);
+// int32_t sub_int_from_fp(int32_t, int);
+// int32_t mul_fp(int32_t, int32_t);
+// int32_t div_fp(int32_t, int32_t);
 
 #endif /* threads/thread.h */

@@ -63,8 +63,10 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-mlfqs". */
 bool thread_mlfqs;
 
-// Task 1
-int32_t load_avg;
+// Task 1 BSD
+/* System load average, estimates average number of
+threads ready to run over the past minute */
+static int32_t load_avg; 
 
 static void kernel_thread (thread_func *, void *aux);
 
@@ -82,8 +84,19 @@ static tid_t allocate_tid (void);
 bool compare_priority_thread (const struct list_elem *, 
     const struct list_elem *, bool);
 void update_priority(void);
-bool less_priority_lock_elem (const struct list_elem *, 
-    const struct list_elem *, void *aux);
+
+// Task 1 BSD
+static void recal_priority(struct thread*, void *aux);
+static void recal_recent_cpu(struct thread*, void *aux);
+static void recal_load_avg(void);
+
+static int32_t convert_int_to_fp(int);
+static int convert_fp_to_int_round_zero(int32_t);
+static int convert_fp_to_int_round_nearest(int32_t);
+static int32_t add_fp_and_int(int32_t, int);
+static int32_t sub_int_from_fp(int32_t, int);
+static int32_t mul_fp(int32_t, int32_t);
+static int32_t div_fp(int32_t, int32_t);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -449,7 +462,7 @@ thread_get_priority (void)
 }
 
 // Task 1 BSD
-void recal_priority(struct thread* t, void *aux UNUSED) {
+static void recal_priority(struct thread* t, void *aux UNUSED) {
   int32_t recent_cpu = t->recent_cpu;
   int priority = PRI_MAX - convert_fp_to_int_round_zero(recent_cpu / 4) 
       - (t->nice * 2);
@@ -461,12 +474,12 @@ void recal_priority(struct thread* t, void *aux UNUSED) {
     t->base_priority = priority;
 }
 
-void recal_recent_cpu(struct thread* t, void *aux UNUSED) {
+static void recal_recent_cpu(struct thread* t, void *aux UNUSED) {
   int32_t coefficient = div_fp(2 * load_avg, add_fp_and_int(2 * load_avg, 1));
   t->recent_cpu = add_fp_and_int(mul_fp(coefficient, t->recent_cpu), t->nice);
 }
 
-void recal_load_avg() {
+static void recal_load_avg() {
   int ready_threads = list_size(&ready_list);
   if (thread_current() != idle_thread) {
     ready_threads++;
@@ -763,32 +776,30 @@ void update_priority(void) {
   thread_set_effective_priority(thread_current(), thread_current()->base_priority);
 }
 
+// Task 1 BSD
+/* Fixed point arithmetic functions */
 
-// Fixed-point
-
-int32_t convert_int_to_fp(int n) {
+static int32_t convert_int_to_fp(int n) {
    return n * F;
-};
-int convert_fp_to_int_round_zero(int32_t x) {
+}
+static int convert_fp_to_int_round_zero(int32_t x) {
    return x / F;
-};
-int convert_fp_to_int_round_nearest(int32_t x) {
+}
+static int convert_fp_to_int_round_nearest(int32_t x) {
    if (x >= 0)
       return (x + F/2) / F;
    else 
       return (x - F/2) / F;
-};
-int32_t add_fp_and_int(int32_t x, int n) {
+}
+static int32_t add_fp_and_int(int32_t x, int n) {
    return x + n * F;
-};
-int32_t sub_int_from_fp(int32_t x, int n) {
+}
+static int32_t sub_int_from_fp(int32_t x, int n) {
    return x - n * F;
-};
-int32_t mul_fp(int32_t x, int32_t y) {
+}
+static int32_t mul_fp(int32_t x, int32_t y) {
    return (((int64_t)x) * y) / F;
-};
-int32_t div_fp(int32_t x , int32_t y) {
+}
+static int32_t div_fp(int32_t x , int32_t y) {
    return (((int64_t)x) * F) / y;
-};
-
-
+}
