@@ -126,7 +126,7 @@ thread_init (void)
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 
-  // Task 1
+  // Task 1 BSD
   /* Initialise load_avg */
   load_avg = convert_int_to_fp(0);  
 }
@@ -162,19 +162,21 @@ thread_tick (void)
 {
   struct thread *t = thread_current ();
 
-  // Task 1
+  // Task 1 BSD
   if (thread_mlfqs) {
-    /* Update load_avg */
+    /* Update load_avg every second */
     if (timer_ticks() % TIMER_FREQ == 0) {
       recal_load_avg();
     }
-    /* Update recent_cpu */
+    /* Update recent_cpu of running thread every tick */
     if (t != idle_thread) {
       t->recent_cpu = add_fp_and_int(t->recent_cpu, 1);
+      /* Update priority of running thread if 4th tick */
       if (timer_ticks() % 4 == 0) {
         recal_priority(t, NULL);
       }
     }
+    /* Update recent_cpu and priority of all threads every second */
     if (timer_ticks() % TIMER_FREQ == 0) {
       thread_foreach(recal_recent_cpu, NULL);
       thread_foreach(recal_priority, NULL);
@@ -385,28 +387,6 @@ thread_yield (void)
   intr_set_level (old_level);
 }
 
-// Task 1
-/* For two threads A and B, compare the priorities. 
-   If higher is true, returns true if priority of A is higher than B, 
-   false otherwise. The opposite if higher is false. */
-bool compare_priority_thread (const struct list_elem *a, 
-    const struct list_elem *b, bool higher) {
-  struct thread *thread_a = list_entry(a, struct thread, elem);
-  struct thread *thread_b = list_entry(b, struct thread, elem);
-  if (thread_mlfqs) {
-    if (higher)
-      return ((thread_a->base_priority) > (thread_b->base_priority));
-    else
-      return ((thread_a->base_priority) < (thread_b->base_priority));
-  }
-  else {
-    if (higher)
-      return ((thread_a->effective_priority) > (thread_b->effective_priority));
-    else
-      return ((thread_a->effective_priority) < (thread_b->effective_priority));
-  }
-}
-
 /* Invoke function 'func' on all threads, passing along 'aux'.
    This function must be called with interrupts off. */
 void
@@ -424,13 +404,15 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
-/* Sets the current thread's priority to NEW_PRIORITY. */
+/* Sets the current thread's priority to new_priority. */
 void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->base_priority = new_priority;
   if (!thread_mlfqs) {
     update_priority();
+    /* Check if priority of highest priority thread in ready_list is 
+       higher than current thread*/
     if (!list_empty(&ready_list)) {
       if (list_entry(list_front(&ready_list), struct thread, elem) 
           -> effective_priority > new_priority) 
@@ -439,29 +421,30 @@ thread_set_priority (int new_priority)
   }
 }
 
-/* Sets the current thread's priority to NEW_PRIORITY. */
-void
-thread_set_effective_priority (struct thread* t, int new_priority) 
-{
-    t->effective_priority = new_priority;
-    if (t->waiting_lock != NULL) {
-      if (t->waiting_lock->holder->effective_priority < new_priority) {
-        thread_set_effective_priority(t->waiting_lock->holder, new_priority);
-      }
+/* Sets the effective priority of thread t to new_priority. */
+void thread_set_effective_priority (struct thread* t, int new_priority) {
+  t->effective_priority = new_priority;
+  /* For nested donations. If the thread is waiting for a lock, check if
+     effective priority of lock holder is higher than the thread. */
+  if (t->waiting_lock != NULL) {
+    if (t->waiting_lock->holder->effective_priority < new_priority) {
+      thread_set_effective_priority(t->waiting_lock->holder, new_priority);
     }
+  }
 }
 
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) 
 {
-  if (thread_mlfqs) {
+  if (thread_mlfqs)
     return thread_current ()->base_priority;
-  }
-  return thread_current ()->effective_priority;
+  else
+    return thread_current ()->effective_priority;
 }
 
 // Task 1 BSD
+/* Recalculates and updates priority of thread t */
 static void recal_priority(struct thread* t, void *aux UNUSED) {
   int32_t recent_cpu = t->recent_cpu;
   int priority = PRI_MAX - convert_fp_to_int_round_zero(recent_cpu / 4) 
@@ -474,11 +457,13 @@ static void recal_priority(struct thread* t, void *aux UNUSED) {
     t->base_priority = priority;
 }
 
+/* Recalculates and updates recent_cpu of thread t */
 static void recal_recent_cpu(struct thread* t, void *aux UNUSED) {
   int32_t coefficient = div_fp(2 * load_avg, add_fp_and_int(2 * load_avg, 1));
   t->recent_cpu = add_fp_and_int(mul_fp(coefficient, t->recent_cpu), t->nice);
 }
 
+/* Recalculates and updates load_avg */
 static void recal_load_avg() {
   int ready_threads = list_size(&ready_list);
   if (thread_current() != idle_thread) {
@@ -494,11 +479,13 @@ void
 thread_set_nice (int nice) 
 {
   thread_current()->nice = nice;
+  /* Update priority of current thread */
   recal_priority(thread_current(), NULL);
   if (!list_empty(&ready_list)) {
-    /* Get the thread with highest priority in ready_list */
+    /* Check if priority of highest priority thread in ready_list is 
+       higher than current thread*/
     struct thread* highest_ready_thread = list_entry(list_front(&ready_list), struct thread, elem);
-    if (thread_get_priority() < highest_ready_thread->base_priority) {
+    if (highest_ready_thread->base_priority > thread_get_priority()) {
       thread_yield();
     }
   }
@@ -617,10 +604,11 @@ init_thread (struct thread *t, const char *name, int priority)
 
   t->magic = THREAD_MAGIC;
 
-  // Task 1
+  // Task 1 BSD
   /* Initialize nice and recent_cpu */
   t->nice = 0;
   t->recent_cpu = 0;
+  // Task 1
   /* Initialize held_locks list */
   list_init(&t->held_locks);
 
@@ -725,12 +713,11 @@ schedule (void)
   thread_schedule_tail (prev);
 }
 
+// Task 0
 /* Compares the wake_ticks of two threads. 
    For use in list_insert_ordered. */
-bool
-compare_wake_ticks_less (const struct list_elem *a, 
-                        const struct list_elem *b, void *aux UNUSED)
-{
+bool compare_wake_ticks_less (const struct list_elem *a, 
+    const struct list_elem *b, void *aux UNUSED) {
   struct thread *ptr1 = list_entry (a, struct thread, elem);
   struct thread *ptr2 = list_entry (b, struct thread, elem);
   return ptr1->wake_ticks < ptr2->wake_ticks;
@@ -755,10 +742,30 @@ allocate_tid (void)
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 // Task 1
-/* When lock_release() or set_priority() is called, it updates
+/* For two threads A and B, compare the priorities. 
+   If higher is true, returns true if priority of A is higher than B, 
+   false otherwise. The opposite if higher is false. */
+bool compare_priority_thread (const struct list_elem *a, 
+    const struct list_elem *b, bool higher) {
+  struct thread *thread_a = list_entry(a, struct thread, elem);
+  struct thread *thread_b = list_entry(b, struct thread, elem);
+  if (thread_mlfqs) {
+    if (higher)
+      return ((thread_a->base_priority) > (thread_b->base_priority));
+    else
+      return ((thread_a->base_priority) < (thread_b->base_priority));
+  }
+  else {
+    if (higher)
+      return ((thread_a->effective_priority) > (thread_b->effective_priority));
+    else
+      return ((thread_a->effective_priority) < (thread_b->effective_priority));
+  }
+}
+
+/* When lock_release() or thread_set_priority() is called, it updates
    the effective priority of current thread to the higher of
    its base priority or the highest donated priority. */
-
 void update_priority(void) {
   if (!list_empty(&thread_current()->held_locks)) {
     /* Get the lock with the highest priority in its semaphore waiters list */
@@ -787,9 +794,9 @@ static int convert_fp_to_int_round_zero(int32_t x) {
 }
 static int convert_fp_to_int_round_nearest(int32_t x) {
    if (x >= 0)
-      return (x + F/2) / F;
+      return (x + F / 2) / F;
    else 
-      return (x - F/2) / F;
+      return (x - F / 2) / F;
 }
 static int32_t add_fp_and_int(int32_t x, int n) {
    return x + n * F;

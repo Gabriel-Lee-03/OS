@@ -151,6 +151,8 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
+// Task 1
+void thread_set_effective_priority (struct thread*, int);
 
 int thread_get_nice (void);
 void thread_set_nice (int);
@@ -159,23 +161,11 @@ int thread_get_load_avg (void);
 
 // Task 0
 bool compare_wake_ticks_less (const struct list_elem *,
-                              const struct list_elem *, void *);
+                              const struct list_elem *, void *aux);
 
 // Task 1
 bool compare_priority_thread (const struct list_elem *, 
     const struct list_elem *, bool);
 void update_priority(void);
-
-// // Task 1 BSD
-// void recal_priority(struct thread*, void *aux);
-// void recal_recent_cpu(struct thread*, void *aux);
-// void recal_load_avg();
-
-// // Fixed-point
-// int convert_fp_to_int_round_nearest(int32_t);
-// int32_t add_fp_and_int(int32_t, int);
-// int32_t sub_int_from_fp(int32_t, int);
-// int32_t mul_fp(int32_t, int32_t);
-// int32_t div_fp(int32_t, int32_t);
 
 #endif /* threads/thread.h */
