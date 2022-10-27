@@ -313,7 +313,8 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   // Task 1
-  list_insert_ordered (&ready_list, &t->elem, compare_priority_thread, true);
+  list_insert_ordered (&ready_list, &t->elem, 
+      compare_priority_thread, true);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -384,7 +385,8 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_insert_ordered (&ready_list, &cur->elem, compare_priority_thread, true);
+    list_insert_ordered (&ready_list, &cur->elem, 
+        compare_priority_thread, true);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -490,7 +492,8 @@ thread_set_nice (int nice)
   if (!list_empty(&ready_list)) {
     /* Check if priority of highest priority thread in ready_list is 
        higher than current thread*/
-    struct thread* highest_ready_thread = list_entry(list_front(&ready_list), struct thread, elem);
+    struct thread* highest_ready_thread = list_entry(
+        list_front(&ready_list), struct thread, elem);
     if (highest_ready_thread->base_priority > thread_get_priority()) {
       thread_yield();
     }
@@ -770,23 +773,27 @@ bool compare_priority_thread (const struct list_elem *a,
 }
 
 /* When lock_release() or thread_set_priority() is called, it updates
-   the effective priority of current thread to the higher of
-   its base priority or the highest donated priority. */
+   the effective priority of current thread to the higher of its base 
+   priority or the highest donated priority. */
 void update_priority(void) {
   if (!list_empty(&thread_current()->held_locks)) {
     /* Get the lock with the highest priority in its semaphore waiters list */
-    struct list_elem* max_lock_elem = list_max(&thread_current()->held_locks, less_priority_lock_elem, NULL);
+    struct list_elem* max_lock_elem = list_max(&thread_current()->held_locks, 
+        less_priority_lock_elem, NULL);
     struct lock* max_lock = list_entry(max_lock_elem, struct lock, lock_elem);
     if (!list_empty(&(&max_lock->semaphore)->waiters)) {
       /* Get the thread with the highest priority */
-      struct thread* max_thread = list_entry(list_max((&(&max_lock->semaphore)->waiters), compare_priority_thread, false), struct thread, elem);
+      struct thread* max_thread = list_entry(list_max((&(&max_lock->semaphore)
+          ->waiters), compare_priority_thread, false), struct thread, elem);
       if (max_thread->effective_priority > thread_current()->base_priority) {
-        thread_set_effective_priority(thread_current(), max_thread->effective_priority);
+        thread_set_effective_priority(thread_current(), 
+            max_thread->effective_priority);
         return;
       };
     }
   }
-  thread_set_effective_priority(thread_current(), thread_current()->base_priority);
+  thread_set_effective_priority(thread_current(), 
+      thread_current()->base_priority);
 }
 
 // Task 1 BSD

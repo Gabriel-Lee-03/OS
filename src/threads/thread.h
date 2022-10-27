@@ -100,7 +100,8 @@ struct thread
     int nice;                       /* Nice value */
     int32_t recent_cpu;             /* Estimate of recently used CPU time */
     struct lock* waiting_lock;      /* A lock that the thread is waiting */
-    struct list held_locks;         /* A list of locks that the thread is holding */
+    struct list held_locks;         
+    /* A list of locks that the thread is holding */
 
     struct list_elem allelem;       /* List element for all threads list. */
 
@@ -108,7 +109,8 @@ struct thread
     struct list_elem elem;          /* List element. */
 
     /* The number of ticks since the OS boosted when the thread should wake
-       (Calculated by adding the length of sleep to the value of ticks when put to sleep). */
+       (Calculated by adding the length of sleep to the value of ticks when 
+       put to sleep). */
     int64_t wake_ticks;             /* Tick to wake. */
 
 #ifdef USERPROG
