@@ -381,8 +381,8 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   // Task 1
   /* Remove and release the semaphore with highest priority waiting thread */
   if (!list_empty (&cond->waiters)) {
-    struct semaphore_elem* max_sema_elem = list_max(&cond->waiters, 
-        less_priority_sema_elem, NULL);
+    struct semaphore_elem* max_sema_elem = list_entry(list_max(&cond->waiters, 
+        less_priority_sema_elem, NULL), struct semaphore_elem, elem);
     list_remove(max_sema_elem);   
     sema_up(&max_sema_elem->semaphore);
   }
@@ -418,18 +418,22 @@ bool less_priority_sema (const struct semaphore *a,
     /* Get the priority of the highest priority thread in the waiting list */
     max_thread = list_entry(list_max(&a->waiters, 
       compare_priority_thread, false), struct thread, elem);
-    if (thread_mlfqs)
+    if (thread_mlfqs) {
       max_priority_a = max_thread->base_priority;
-    else
+    }
+    else {
       max_priority_a = max_thread->effective_priority;
+    }
   }
   if (!list_empty(&b->waiters)) {
     max_thread = list_entry(list_max(&b->waiters, 
         compare_priority_thread, false), struct thread, elem);
-    if (thread_mlfqs)
+    if (thread_mlfqs) {
       max_priority_b = max_thread->base_priority;
-    else
+    }
+    else {
       max_priority_b = max_thread->effective_priority;
+    }
   }
   return (max_priority_a < max_priority_b);
 }

@@ -94,7 +94,6 @@ static int32_t convert_int_to_fp(int);
 static int convert_fp_to_int_round_zero(int32_t);
 static int convert_fp_to_int_round_nearest(int32_t);
 static int32_t add_fp_and_int(int32_t, int);
-static int32_t sub_int_from_fp(int32_t, int);
 static int32_t mul_fp(int32_t, int32_t);
 static int32_t div_fp(int32_t, int32_t);
 
@@ -171,15 +170,15 @@ thread_tick (void)
     /* Update recent_cpu of running thread every tick */
     if (t != idle_thread) {
       t->recent_cpu = add_fp_and_int(t->recent_cpu, 1);
-      /* Update priority of running thread if 4th tick */
-      if (timer_ticks() % 4 == 0) {
-        recal_priority(t, NULL);
-      }
     }
     /* Update recent_cpu and priority of all threads every second */
     if (timer_ticks() % TIMER_FREQ == 0) {
       thread_foreach(recal_recent_cpu, NULL);
       thread_foreach(recal_priority, NULL);
+    }
+    /* Update priority of running thread if 4th tick */
+    if (timer_ticks() % 4 == 0) {
+      recal_priority(t, NULL);
     }
   }
 
@@ -487,8 +486,6 @@ void
 thread_set_nice (int nice) 
 {
   thread_current()->nice = nice;
-  /* Update priority of current thread */
-  recal_priority(thread_current(), NULL);
   if (!list_empty(&ready_list)) {
     /* Check if priority of highest priority thread in ready_list is 
        higher than current thread*/
@@ -813,9 +810,6 @@ static int convert_fp_to_int_round_nearest(int32_t x) {
 }
 static int32_t add_fp_and_int(int32_t x, int n) {
    return x + n * F;
-}
-static int32_t sub_int_from_fp(int32_t x, int n) {
-   return x - n * F;
 }
 static int32_t mul_fp(int32_t x, int32_t y) {
    return (((int64_t)x) * y) / F;
