@@ -3,6 +3,7 @@
         "intr-stubs.h": "c",
         "thread": "c",
         "mutex": "c",
-        "shared_mutex": "c"
+        "shared_mutex": "c",
+        "functional": "c"
     }
 }

@@ -301,6 +301,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
         }
     }
 
+  // Task 2.2 (?)
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
@@ -451,7 +452,8 @@ setup_stack (void **esp)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
-        *esp = PHYS_BASE;
+        // Task 2 fake setup
+        *esp = PHYS_BASE - 12;
       else
         palloc_free_page (kpage);
     }
