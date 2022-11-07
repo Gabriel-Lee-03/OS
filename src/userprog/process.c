@@ -88,6 +88,9 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  while (true){
+    thread_yield();
+  };
   return -1;
 }
 
@@ -114,6 +117,8 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+
+  printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
 }
 
 /* Sets up the CPU for running user code in the current

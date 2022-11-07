@@ -108,10 +108,14 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;          /* List element. */
 
+   // Task 0
     /* The number of ticks since the OS boosted when the thread should wake
        (Calculated by adding the length of sleep to the value of ticks when 
        put to sleep). */
     int64_t wake_ticks;             /* Tick to wake. */
+
+    // Task 2
+    int exit_status;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

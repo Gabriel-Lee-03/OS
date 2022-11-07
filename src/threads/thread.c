@@ -366,6 +366,9 @@ thread_exit (void)
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
   intr_disable ();
+  // Task 2
+  process_exit();
+
   list_remove (&thread_current()->allelem);
   thread_current ()->status = THREAD_DYING;
   schedule ();
@@ -617,6 +620,10 @@ init_thread (struct thread *t, const char *name, int priority)
   /* Initialize nice and recent_cpu */
   t->nice = 0;
   t->recent_cpu = 0;
+
+  // Task 2
+  t->exit_status = 0;
+
   // Task 1
   /* Initialize held_locks list */
   list_init(&t->held_locks);
