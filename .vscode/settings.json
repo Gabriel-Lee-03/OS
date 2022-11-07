@@ -4,6 +4,9 @@
         "thread": "c",
         "mutex": "c",
         "shared_mutex": "c",
-        "functional": "c"
+        "functional": "c",
+        "atomic": "c",
+        "memory_resource": "c",
+        "stop_token": "c"
     }
 }
