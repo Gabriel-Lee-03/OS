@@ -3,6 +3,9 @@
 
 #include "threads/thread.h"
 
+// Task 2
+typedef int pid_t;
+
 tid_t process_execute (const char *file_name);
 int process_wait (tid_t);
 void process_exit (void);

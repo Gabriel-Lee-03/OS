@@ -3,8 +3,23 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "userprog/process.h"
+#include "threads/vaddr.h"
 
 static void syscall_handler (struct intr_frame *);
+static void sc_halt(void);
+static void sc_exit(int);
+static pid_t sc_exec(const char *);
+static int sc_wait (pid_t);
+static bool sc_create (const char *, unsigned );
+static bool sc_remove (const char *);
+static int sc_open (const char *);
+static int sc_filesize (int);
+static int sc_read (int, void *, unsigned);
+static int sc_write (int, const void *, unsigned);
+static void sc_seek (int, unsigned);
+static unsigned sc_tell (int);
+static void sc_close (int);
 
 void
 syscall_init (void) 
@@ -16,92 +31,83 @@ static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
   if (!is_user_vaddr(f->esp)) {
-    page_fault(&f);
+    //page_fault(&f);
     return;
   }
   if (!pagedir_get_page(f->esp)) {
-    page_fault(&f);
+    //page_fault(&f);
     return;
   }
   int syscall_num = f->esp;
   switch (syscall_num) {
   case SYS_HALT:
-    halt();
+    sc_halt();
     break;
 
   case SYS_EXIT:
     int status = (f->esp) + 1;
-    exit(status);
+    sc_exit(status);
     break;
 
   case SYS_EXEC:
     const char *cmd_line = (f->esp) + 1; // first argv
-    pid_t result = exec(cmd_line);
-    f->eax = (uint32_t) result;
+    f->eax = (uint32_t) sc_exec(cmd_line);
     break;
 
   case SYS_WAIT:
-    __pid_t pid = (f->esp) + 1;
-    int result = wait(pid);
-    f->eax = (uint32_t) result;
+    pid_t pid = (f->esp) + 1;
+    f->eax = (uint32_t) sc_wait(pid);
     break;
 
   case SYS_CREATE:
     char *file = (f->esp) + 1;
     unsigned initial_size = (f->esp) + 2;
-    bool result = create(file, initial_size);
-    f->eax = (uint32_t) result;
+    f->eax = (uint32_t) sc_create(file, initial_size);
     break;
     
   case SYS_REMOVE:
-    char *file = (f->esp) + 1;
-    bool result = remove(file);
-    f->eax = (uint32_t) result;
+    *file = (f->esp) + 1;
+    f->eax = (uint32_t) sc_remove(file);
     break;
 
   case SYS_OPEN:
-    char *file = (f->esp) + 1;
-    int result = open(file);
-    f->eax = (uint32_t) result;
+    *file = (f->esp) + 1;
+    f->eax = (uint32_t) sc_open(file);
     break;
 
   case SYS_FILESIZE:
     int fd = (f->esp) + 1;
-    int result = filesize(fd);
-    f->eax = (uint32_t) result;
+    f->eax = (uint32_t) sc_filesize(fd);
     break;
     
   case SYS_READ:
-    int fd = (f->esp) + 1;
+    fd = (f->esp) + 1;
     void *buffer = (f->esp) + 2;
     unsigned size = (f->esp) + 3;
-    int result = read(fd, buffer, size);
-    f->eax = (uint32_t) result;
+    f->eax = (uint32_t) sc_read(fd, buffer, size);
     break; 
 
   case SYS_WRITE:
-    int fd = (f->esp) + 1;
-    void *buffer = (f->esp) + 2;
-    unsigned size = (f->esp) + 3;
-    int result = write(fd, buffer, size);
-    f->eax = (uint32_t) result;
+    fd = (f->esp) + 1;
+    buffer = (f->esp) + 2;
+    size = (f->esp) + 3;
+    f->eax = (uint32_t) sc_write(fd, buffer, size);
     break;
 
   case SYS_SEEK:
-    int fd = (f->esp) + 1;
+    fd = (f->esp) + 1;
     unsigned position = (f->esp) + 2;
-    seek(fd, position);
+    sc_seek(fd, position);
     break;
 
   case SYS_TELL:
-    int fd = (f->esp) + 1;
-    unsigned result = tell(fd);
-    f->eax = (uint32_t) result;
+    fd = (f->esp) + 1;
+    f->eax = (uint32_t) sc_tell(fd);
     break;
     
   case SYS_CLOSE:
-    int fd = (f->esp) + 1;
-    close(fd);
+    fd = (f->esp) + 1;
+    sc_close(fd);
     break; 
   }
 
@@ -110,43 +116,43 @@ syscall_handler (struct intr_frame *f UNUSED)
 }
 
 // Task 2
-void halt(void) {
+static void sc_halt(void) {
 }
 
-void exit(int status) {
+static void sc_exit(int status) {
   thread_current()->exit_status = status;
   thread_exit();
 }
 
-__pid_t exec(const char *cmd_line) {
+static pid_t sc_exec(const char *cmd_line) {
   return 0;
 }
 
-int wait (__pid_t pid) {
+static int sc_wait (pid_t pid) {
   return 0;
 }
 
-bool create (const char *file, unsigned initial_size) {
+static bool sc_create (const char *file, unsigned initial_size) {
   return 0;
 }
 
-bool remove (const char *file) {
+static bool sc_remove (const char *file) {
   return 0;
 }
 
-int open (const char *file) {
+static int sc_open (const char *file) {
   return 0;
 }
 
-int filesize (int fd) {
+static int sc_filesize (int fd) {
   return 0;
 }
 
-int read (int fd, void *buffer, unsigned size) {
+static int sc_read (int fd, void *buffer, unsigned size) {
   return 0;
 }
 
-int write (int fd, const void *buffer, unsigned size) {
+static int sc_write (int fd, const void *buffer, unsigned size) {
   if (fd == 1) {
     if (size > 500) {
       putbuf(buffer, 500);
@@ -162,14 +168,14 @@ int write (int fd, const void *buffer, unsigned size) {
   }
 }
 
-void seek (int fd, unsigned position) {
+static void sc_seek (int fd, unsigned position) {
 
 }
 
-unsigned tell (int fd) {
-  return 0;
+static unsigned sc_tell (int fd) {
+  return (unsigned) 0;
 }
 
-void close (int fd) {
+static void sc_close (int fd) {
 
 }

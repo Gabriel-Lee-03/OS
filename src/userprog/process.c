@@ -19,7 +19,7 @@
 #include "threads/vaddr.h"
 
 static thread_func start_process NO_RETURN;
-static bool load (const char *cmdline, void (**eip) (void), void **esp, char* argv, int argc);
+static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -39,18 +39,10 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
 
   // Task 2
-  char* token;
-  char *save_ptr;
-  char* argv[100];
-  int index = 0;
-  for (token = strtok_r(file_name, " ", &save_ptr);
-      token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
-    argv[index] = token;
-    index++;
-  }
+  char *token = strtok_r(file_name, " ", &file_name);
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (argv[0], PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -211,7 +203,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, char* argv, int argc);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -222,7 +214,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-load (const char *file_name, void (**eip) (void), void **esp, char* argv, int argc) 
+load (const char *file_name, void (**eip) (void), void **esp) 
 {
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
@@ -316,6 +308,17 @@ load (const char *file_name, void (**eip) (void), void **esp, char* argv, int ar
           break;
         }
     }
+
+  // Task 2
+  char* token;
+  char *save_ptr;
+  char* argv[100];
+  int argc = 0;
+  for (token = strtok_r(file_name, " ", &save_ptr);
+      token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
+    argv[argc] = token;
+    argc++;
+  }
 
   /* Set up stack. */
   if (!setup_stack (esp, argv, argc))
@@ -470,22 +473,41 @@ setup_stack (void **esp, char* argv, int argc)
         // Task 2 fake setup
         *esp = PHYS_BASE - 12;
         
+        uint8_t total_size = 0;
         uint32_t *arg_address[argc];
         // Set up stack
         for (int i = argc - 1; i >= 0; i--) {
           int len_arg = (strlen(argv[i]) + 1) * sizeof(char);
+          total_size += len_arg;
           *esp = *esp - len_arg;
           memcpy(*esp, argv[i], len_arg);
           arg_address[i] = (uint32_t *) *esp;
         }
+
+        while (total_size % 4 != 0) {
+          *esp--;
+          *esp = (uint8_t) 0;
+          total_size++;
+        }
+
         *esp = *esp - 4;
-        *esp = 0;
+        *esp = (char *) 0;
         
         for (int i = argc - 1; i >= 0; i--) {
           *esp = *esp - 4;
           *esp = arg_address[i];
         }
-        *esp = *esp - 4;}
+        uint32_t curr_address = (uint32_t *) *esp;
+
+        *esp = *esp - 4;
+        *esp = curr_address;
+
+        *esp = *esp - 4;
+        *esp = argc;
+
+        *esp = *esp - 4;
+        *esp = (void *) 0;
+      }
       else
         palloc_free_page (kpage);
     }
