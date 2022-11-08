@@ -50,7 +50,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     break;
 
   case SYS_EXEC:
-    const char *cmd_line = (f->esp) + 1; // first argv
+    const char *cmd_line = (int *)(f->esp) + 1; // first argv
     f->eax = (uint32_t) sc_exec(cmd_line);
     break;
 

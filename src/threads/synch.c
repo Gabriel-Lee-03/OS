@@ -134,12 +134,22 @@ sema_up (struct semaphore *sema)
        current thread */
     if (thread_mlfqs) {
       if (max_waiting_thread->base_priority > thread_get_priority()) {
-        thread_yield();
+        if (intr_context) {
+          intr_yield_on_return();
+        }
+        else {
+          thread_yield();
+        }
       }
     }
     else {
       if (max_waiting_thread->effective_priority > thread_get_priority()) {
-        thread_yield();
+        if (intr_context()) {
+          intr_yield_on_return();
+        }
+        else {
+          thread_yield();
+        }
       }
     }
   }
