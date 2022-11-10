@@ -1,12 +1,13 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
-#include <console.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "userprog/process.h"
 #include "threads/vaddr.h"
 #include "filesys/file.h"
+#include "filesys/filesys.h"
+#include "lib/kernel/stdio.h"
 
 // Task 2
 static void syscall_handler (struct intr_frame *);
@@ -100,8 +101,8 @@ syscall_handler (struct intr_frame *f UNUSED)
 
   case SYS_WRITE:
     fd = (int *)(f->esp) + 1;
-    buffer = (f->esp) + 2;
-    size = (f->esp) + 3;
+    buffer = (int *)(f->esp) + 2;
+    size = (int *)(f->esp) + 3;
     f->eax = (uint32_t) sc_write(fd, buffer, size);
     break;
 
@@ -144,15 +145,23 @@ static int sc_wait (pid_t pid) {
 }
 
 static bool sc_create (const char *file, unsigned initial_size) {
-  return 0;
+  return filesys_create(file, initial_size);
 }
 
 static bool sc_remove (const char *file) {
-  return 0;
+  return filesys_remove(file);
 }
 
 static int sc_open (const char *file) {
-  return 0;
+  struct file_with_fd* new_file_with_fd;
+  struct file* new_file = filesys_open(file);
+  if (new_file == NULL) {
+    return -1;
+  }
+  new_file_with_fd->file_ptr = new_file;
+  new_file_with_fd->fd = list_size(&thread_current()->file_list); 
+  list_push_back(&thread_current()->file_list, &new_file_with_fd->elem);
+  return new_file_with_fd->fd;
 }
 
 static int sc_filesize (int fd) {

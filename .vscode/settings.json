@@ -14,7 +14,8 @@
         "list.h": "c",
         "vaddr.h": "c",
         "random": "c",
-        "file.h": "c"
+        "file.h": "c",
+        "filesys.h": "c"
     },
     "C_Cpp.errorSquiggles": "Enabled"
 }
