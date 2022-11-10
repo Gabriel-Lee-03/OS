@@ -1,10 +1,13 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
+#include <console.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "userprog/process.h"
 #include "threads/vaddr.h"
+#include "filesys/file.h"
+
 
 static void syscall_handler (struct intr_frame *);
 static void sc_halt(void);
@@ -34,18 +37,18 @@ syscall_handler (struct intr_frame *f UNUSED)
     //page_fault(&f);
     return;
   }
-  if (!pagedir_get_page(f->esp)) {
+  if (!pagedir_get_page(thread_current()->pagedir, f->esp)) {
     //page_fault(&f);
     return;
   }
-  int syscall_num = f->esp;
+  int syscall_num = (int *)f->esp;
   switch (syscall_num) {
   case SYS_HALT:
     sc_halt();
     break;
 
   case SYS_EXIT:
-    int status = (f->esp) + 1;
+    int status = (int *)(f->esp) + 1;
     sc_exit(status);
     break;
 
@@ -55,58 +58,58 @@ syscall_handler (struct intr_frame *f UNUSED)
     break;
 
   case SYS_WAIT:
-    pid_t pid = (f->esp) + 1;
+    pid_t pid = (int *)(f->esp) + 1;
     f->eax = (uint32_t) sc_wait(pid);
     break;
 
   case SYS_CREATE:
-    char *file = (f->esp) + 1;
-    unsigned initial_size = (f->esp) + 2;
+    char *file = (int *)(f->esp) + 1;
+    unsigned initial_size = (int *)(f->esp) + 2;
     f->eax = (uint32_t) sc_create(file, initial_size);
     break;
     
   case SYS_REMOVE:
-    *file = (f->esp) + 1;
+    *file = (int *)(f->esp) + 1;
     f->eax = (uint32_t) sc_remove(file);
     break;
 
   case SYS_OPEN:
-    *file = (f->esp) + 1;
+    *file = (int *)(f->esp) + 1;
     f->eax = (uint32_t) sc_open(file);
     break;
 
   case SYS_FILESIZE:
-    int fd = (f->esp) + 1;
+    int fd = (int *)(f->esp) + 1;
     f->eax = (uint32_t) sc_filesize(fd);
     break;
     
   case SYS_READ:
-    fd = (f->esp) + 1;
-    void *buffer = (f->esp) + 2;
-    unsigned size = (f->esp) + 3;
+    fd = (int *)(f->esp) + 1;
+    void *buffer = (int *)(f->esp) + 2;
+    unsigned size = (int *)(f->esp) + 3;
     f->eax = (uint32_t) sc_read(fd, buffer, size);
     break; 
 
   case SYS_WRITE:
-    fd = (f->esp) + 1;
+    fd = (int *)(f->esp) + 1;
     buffer = (f->esp) + 2;
     size = (f->esp) + 3;
     f->eax = (uint32_t) sc_write(fd, buffer, size);
     break;
 
   case SYS_SEEK:
-    fd = (f->esp) + 1;
-    unsigned position = (f->esp) + 2;
+    fd = (int *)(f->esp) + 1;
+    unsigned position = (int *)(f->esp) + 2;
     sc_seek(fd, position);
     break;
 
   case SYS_TELL:
-    fd = (f->esp) + 1;
+    fd = (int *)(f->esp) + 1;
     f->eax = (uint32_t) sc_tell(fd);
     break;
     
   case SYS_CLOSE:
-    fd = (f->esp) + 1;
+    fd = (int *)(f->esp) + 1;
     sc_close(fd);
     break; 
   }
@@ -155,11 +158,11 @@ static int sc_read (int fd, void *buffer, unsigned size) {
 static int sc_write (int fd, const void *buffer, unsigned size) {
   if (fd == 1) {
     if (size > 500) {
-      putbuf(buffer, 500);
+      putbuf((char *) buffer, 500);
       return 500;
     }
     else {
-      putbuf(buffer, size);
+      putbuf((char *) buffer, size);
       return size;
     }
   }

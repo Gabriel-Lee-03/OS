@@ -229,11 +229,23 @@ load (const char *file_name, void (**eip) (void), void **esp)
     goto done;
   process_activate ();
 
+  // Task 2
+  //("Filename: %s\n", file_name);
+  char* token;
+  char *save_ptr;
+  char* argv[100];
+  int argc = 0;
+  for (token = strtok_r(file_name, " ", &save_ptr);
+      token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
+    argv[argc] = token;
+    argc++;
+  }
+
   /* Open executable file. */
-  file = filesys_open (file_name);
+  file = filesys_open (argv[0]);
   if (file == NULL) 
     {
-      printf ("load: %s: open failed\n", file_name);
+      printf ("load: %s: open failed\n", argv[0]);
       goto done; 
     }
 
@@ -308,17 +320,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
           break;
         }
     }
-
-  // Task 2
-  char* token;
-  char *save_ptr;
-  char* argv[100];
-  int argc = 0;
-  for (token = strtok_r(file_name, " ", &save_ptr);
-      token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
-    argv[argc] = token;
-    argc++;
-  }
 
   /* Set up stack. */
   if (!setup_stack (esp, argv, argc))
@@ -471,46 +472,52 @@ setup_stack (void **esp, char* argv, int argc)
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success) {
         // Task 2 fake setup
-        *esp = PHYS_BASE - 12;
+        *esp = PHYS_BASE;
         
         uint8_t total_size = 0;
         uint32_t *arg_address[argc];
         // Set up stack
         for (int i = argc - 1; i >= 0; i--) {
-          int len_arg = (strlen(argv[i]) + 1) * sizeof(char);
-          total_size += len_arg;
-          *esp = *esp - len_arg;
-          memcpy(*esp, argv[i], len_arg);
+          // printf("Argv %d: %s\n", i, argv[i]);            
+          int len_arg = (strlen(&argv[i]) + 1) * sizeof(char);
+          total_size += (uint8_t) len_arg;
+          *esp -= len_arg;
+          memcpy(*esp, &argv[i], len_arg);
           arg_address[i] = (uint32_t *) *esp;
         }
 
         while (total_size % 4 != 0) {
-          *esp--;
-          *esp = (uint8_t) 0;
-          total_size++;
+          *esp -= sizeof(char);
+          uint8_t word_align = 0;
+          memcpy(*esp, &word_align, sizeof(char));
+          total_size += (uint8_t) sizeof(char);
         }
 
-        *esp = *esp - 4;
-        *esp = (char *) 0;
+        *esp -= sizeof(int);
+        char *zero_char = 0;
+        memcpy(*esp, &zero_char, sizeof(int));
         
         for (int i = argc - 1; i >= 0; i--) {
-          *esp = *esp - 4;
-          *esp = arg_address[i];
+          *esp -= sizeof(int);
+          memcpy(*esp, &arg_address[i], sizeof(int));
         }
         uint32_t curr_address = (uint32_t *) *esp;
 
-        *esp = *esp - 4;
-        *esp = curr_address;
+        *esp -= sizeof(int);
+        memcpy(*esp, &curr_address, sizeof(int));
 
-        *esp = *esp - 4;
-        *esp = argc;
+        *esp -= sizeof(int);
+        memcpy(*esp, &argc, sizeof(int));
 
-        *esp = *esp - 4;
-        *esp = (void *) 0;
+        *esp -= sizeof(int);
+        void *zero_void = 0;
+        memcpy(*esp, &zero_void, sizeof(int));
+        
+        hex_dump(*esp, *esp, PHYS_BASE - *esp, 0);
       }
       else
         palloc_free_page (kpage);
-    }
+      }
   return success;
 }
 

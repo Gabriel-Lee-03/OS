@@ -8,6 +8,11 @@
         "atomic": "c",
         "memory_resource": "c",
         "stop_token": "c",
-        "chrono": "c"
+        "chrono": "c",
+        "thread.h": "c",
+        "interrupt.h": "c",
+        "list.h": "c",
+        "vaddr.h": "c",
+        "random": "c"
     }
 }
