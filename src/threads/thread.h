@@ -103,6 +103,9 @@ struct thread
     struct list held_locks;         
     /* A list of locks that the thread is holding */
 
+    // Task 2
+    struct list file_list;
+
     struct list_elem allelem;       /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */

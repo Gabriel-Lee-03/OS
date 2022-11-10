@@ -13,6 +13,8 @@
         "interrupt.h": "c",
         "list.h": "c",
         "vaddr.h": "c",
-        "random": "c"
-    }
+        "random": "c",
+        "file.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "Enabled"
 }

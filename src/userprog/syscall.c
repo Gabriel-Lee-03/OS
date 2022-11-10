@@ -8,7 +8,7 @@
 #include "threads/vaddr.h"
 #include "filesys/file.h"
 
-
+// Task 2
 static void syscall_handler (struct intr_frame *);
 static void sc_halt(void);
 static void sc_exit(int);
@@ -23,6 +23,14 @@ static int sc_write (int, const void *, unsigned);
 static void sc_seek (int, unsigned);
 static unsigned sc_tell (int);
 static void sc_close (int);
+static struct file* get_file(int);
+
+// Task 2
+struct file_with_fd {
+  struct file* file_ptr;
+  int fd;
+  struct list_elem elem;
+};
 
 void
 syscall_init (void) 
@@ -167,7 +175,8 @@ static int sc_write (int fd, const void *buffer, unsigned size) {
     }
   }
   else {
-    return file_write(fd, buffer, size);
+    struct file* file_to_write = get_file(fd);
+    return file_write(file_to_write, buffer, size);
   }
 }
 
@@ -181,4 +190,12 @@ static unsigned sc_tell (int fd) {
 
 static void sc_close (int fd) {
 
+}
+
+static struct file* get_file(int fd) {
+  struct list_elem* curr_elem = list_front(&thread_current()->file_list);
+  for (int i = 2; i < fd; i++) {
+    curr_elem = curr_elem->next;
+  }
+  return list_entry(curr_elem, struct file_with_fd, elem)->file_ptr;
 }
