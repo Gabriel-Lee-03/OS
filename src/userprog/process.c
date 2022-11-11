@@ -117,6 +117,10 @@ process_wait (tid_t child_tid UNUSED)
 
   //lock the current thread
 
+  //delete from dead_children list
+
+  //create helper method to iterate dead children to find tid. then delete from list
+
   return child_thread->exit_status;
 }
 
