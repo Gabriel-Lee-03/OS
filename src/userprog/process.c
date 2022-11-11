@@ -102,7 +102,7 @@ process_wait (tid_t child_tid UNUSED)
   for(temp_elem = list_front(&thread_current()->child_list);
   temp_elem != list_tail(&thread_current()->child_list);
   temp_elem = list_next(temp_elem)){
-    struct thread *t = list_entry(temp_elem, struct thread, elem);
+    struct thread *t = list_entry(temp_elem, struct thread, child_elem);
     if(t->tid == child_tid){
       child_thread = t;
       break;
@@ -112,6 +112,8 @@ process_wait (tid_t child_tid UNUSED)
   if(child_thread == NULL){
     return -1;
   }
+
+  list_remove(child_thread->child_elem);
 
   //lock the current thread
 
