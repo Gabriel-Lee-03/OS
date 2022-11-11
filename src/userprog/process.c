@@ -322,7 +322,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp, argv, argc))
+  if (!setup_stack (esp, (char *)argv, argc))
     goto done;
 
   /* Start address. */
@@ -501,7 +501,7 @@ setup_stack (void **esp, char* argv, int argc)
           *esp -= sizeof(int);
           memcpy(*esp, &arg_address[i], sizeof(int));
         }
-        uint32_t curr_address = (uint32_t *) *esp;
+        uint32_t curr_address = (uint32_t) *esp;
 
         *esp -= sizeof(int);
         memcpy(*esp, &curr_address, sizeof(int));
@@ -513,7 +513,7 @@ setup_stack (void **esp, char* argv, int argc)
         void *zero_void = 0;
         memcpy(*esp, &zero_void, sizeof(int));
         
-        hex_dump(*esp, *esp, PHYS_BASE - *esp, 0);
+        hex_dump(esp, esp, PHYS_BASE - *esp, 0);
       }
       else
         palloc_free_page (kpage);
