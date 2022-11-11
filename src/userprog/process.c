@@ -91,10 +91,13 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-
+  //task 2
   struct thread *child_thread = NULL;
   struct list_elem *temp_elem;
 
+  if(list_empty(&thread_current()->child_list)){
+    return -1;
+  }
   /*
   while (true){
     thread_yield();
