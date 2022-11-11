@@ -105,6 +105,9 @@ struct thread
 
     // Task 2
     struct list file_list;
+    struct list child_list;
+    struct thread *parent;
+    struct list_elem child_elem;
 
     struct list_elem allelem;       /* List element for all threads list. */
 
