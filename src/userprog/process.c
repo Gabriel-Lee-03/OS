@@ -98,12 +98,24 @@ process_wait (tid_t child_tid UNUSED)
   if(list_empty(&thread_current()->child_list)){
     return -1;
   }
-  /*
-  while (true){
-    thread_yield();
-  };
-  */
-  return -1;
+
+  for(temp_elem = list_front(&thread_current()->child_list);
+  temp_elem != list_tail(&thread_current()->child_list);
+  temp_elem = list_next(temp_elem)){
+    struct thread *t = list_entry(temp_elem, struct thread, elem);
+    if(t->tid == child_tid){
+      child_thread = t;
+      break;
+    }
+  }
+
+  if(child_thread == NULL){
+    return -1;
+  }
+
+  //lock the current thread
+
+  return child_thread->exit_status;
 }
 
 /* Free the current process's resources. */
