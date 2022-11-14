@@ -25,6 +25,13 @@ struct thread* found_thread;
 
 int iterate_dead_children (tid_t target);
 
+struct dead_child_info
+  {
+    tid_t tid;
+    int exit_status;
+    struct list_elem elem;
+  };
+
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -203,8 +210,8 @@ process_exit (void)
   struct dead_child_info *info;
   info->tid = thread_current()->tid;
   info->exit_status = thread_current()->exit_status;
-  list_push_back(&thread_current()->parent->dead_child_list, info->elem);
-  list_remove(&thread_current()->child_elem)
+  list_push_back(&thread_current()->parent->dead_child_list, &info->elem);
+  list_remove(&thread_current()->child_elem);
   printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
   intr_set_level (old_level);
 }

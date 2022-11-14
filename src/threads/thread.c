@@ -49,14 +49,6 @@ struct kernel_thread_frame
     void *aux;                  /* Auxiliary data for function. */
   };
 
-//task 2
-struct dead_child_info
-  {
-    tid_t tid;
-    int exit_status;
-    struct list_elem elem;
-  };
-
 /* Statistics. */
 static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
