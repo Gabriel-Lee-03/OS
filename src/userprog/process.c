@@ -23,6 +23,8 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 // Task 2
 struct thread* found_thread;
 
+int iterate_dead_children (tid_t target);
+
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -108,18 +110,10 @@ process_wait (tid_t child_tid UNUSED)
   struct thread *child_thread = NULL;
   struct list_elem *temp_elem;
 
-  if(!list_empty(&thead_current()->dead_child_list)){
-    for(temp_elem = list_front(&thread_current()->dead_child_list);
-    temp_elem != list_tail(&thread_current()->dead_child_list);
-    temp_elem = list_next(temp_elem)){
-      struct dead_child_info *info = list_entry(temp_elem, struct dead_child_info, elem);
-      if (info->tid == child_tid) {
-        list_remove(info->elem);
-        return info->exit_status;
-      }
-    }
+  int temp_exit_status = iterate_dead_children(child_tid);
+  if(temp_exit_status != -2){
+    return temp_exit_status;
   }
-  
 
   if (list_empty(&thread_current()->child_list)) {
     return -1;
@@ -143,9 +137,31 @@ process_wait (tid_t child_tid UNUSED)
 
   //lock the current thread
 
-  //helper
+  temp_exit_status = iterate_dead_children(child_tid);
+  if(temp_exit_status != -2){
+    return temp_exit_status;
+  }else{
+    return -1;
+  }
+}
 
-  return child_thread->exit_status;
+//task 2
+int iterate_dead_children(tid_t target){
+
+  struct list_elem *temp_elem;
+
+  if(!list_empty(&thead_current()->dead_child_list)){
+    for(temp_elem = list_front(&thread_current()->dead_child_list);
+    temp_elem != list_tail(&thread_current()->dead_child_list);
+    temp_elem = list_next(temp_elem)){
+      struct dead_child_info *info = list_entry(temp_elem, struct dead_child_info, elem);
+      if (info->tid == child_tid) {
+        list_remove(info->elem);
+        return info->exit_status;
+      }
+    }
+  }
+  return -2;
 }
 
 /* Free the current process's resources. */
