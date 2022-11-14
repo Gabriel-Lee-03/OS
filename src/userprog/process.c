@@ -160,7 +160,10 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
-
+  struct dead_child_info *info;
+  info->tid = thread_current()->tid;
+  info->exit_status = thread_current()->exit_status;
+  list_push_back(&thread_current()->dead_child_list, info->elem);
   printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
 }
 
