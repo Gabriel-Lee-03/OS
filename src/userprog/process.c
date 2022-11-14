@@ -191,6 +191,7 @@ process_exit (void)
   info->tid = thread_current()->tid;
   info->exit_status = thread_current()->exit_status;
   list_push_back(&thread_current()->parent->dead_child_list, info->elem);
+  list_remove(&thread_current()->child_elem)
   printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
 }
 
