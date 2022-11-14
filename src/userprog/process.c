@@ -108,6 +108,19 @@ process_wait (tid_t child_tid UNUSED)
   struct thread *child_thread = NULL;
   struct list_elem *temp_elem;
 
+  if(!list_empty(&thead_current()->dead_child_list)){
+    for(temp_elem = list_front(&thread_current()->dead_child_list);
+    temp_elem != list_tail(&thread_current()->dead_child_list);
+    temp_elem = list_next(temp_elem)){
+      struct dead_child_info *info = list_entry(temp_elem, struct dead_child_info, elem);
+      if (info->tid == child_tid) {
+        list_remove(info->elem);
+        return info->exit_status;
+      }
+    }
+  }
+  
+
   if (list_empty(&thread_current()->child_list)) {
     return -1;
   }
@@ -130,9 +143,7 @@ process_wait (tid_t child_tid UNUSED)
 
   //lock the current thread
 
-  //delete from dead_children list
-
-  //create helper method to iterate dead children to find tid. then delete from list
+  //helper
 
   return child_thread->exit_status;
 }
@@ -163,7 +174,7 @@ process_exit (void)
   struct dead_child_info *info;
   info->tid = thread_current()->tid;
   info->exit_status = thread_current()->exit_status;
-  list_push_back(&thread_current()->dead_child_list, info->elem);
+  list_push_back(&thread_current()->parent->dead_child_list, info->elem);
   printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
 }
 
