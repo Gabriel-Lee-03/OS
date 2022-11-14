@@ -115,13 +115,14 @@ process_wait (tid_t child_tid UNUSED)
     return temp_exit_status;
   }
 
+  enum intr_level old_level;
+  old_level = intr_disable ();
+
   if (list_empty(&thread_current()->child_list)) {
     return -1;
   }
 
-  enum intr_level old_level;
-  old_level = intr_disable ();
-
+  
   for (temp_elem = list_front(&thread_current()->child_list);
   temp_elem != list_tail(&thread_current()->child_list);
   temp_elem = list_next(temp_elem)) {
