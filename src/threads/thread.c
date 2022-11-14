@@ -631,6 +631,7 @@ init_thread (struct thread *t, const char *name, int priority)
   // Task 2
   list_init(&t->file_list);
   list_init(&t->child_list);
+  list_init(&t->dead_child_list);
   t->parent = NULL;
 
   old_level = intr_disable ();
