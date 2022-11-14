@@ -20,6 +20,8 @@
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
+// Task 2
+struct thread* found_thread;
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -45,6 +47,17 @@ process_execute (const char *file_name)
   tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
+  else {
+    // Task 2
+    enum intr_level old_level;
+    old_level = intr_disable ();  /* Disable interrupts */
+
+    thread_foreach(find_thread, tid);
+    list_push_back(&thread_current()->child_list, &found_thread->child_elem);
+    found_thread->parent = thread_current();
+
+    intr_set_level (old_level);
+  }
   return tid;
 }
 
@@ -562,4 +575,11 @@ install_page (void *upage, void *kpage, bool writable)
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
+}
+
+// Task 2
+static struct thread* find_thread(struct thread* t, tid_t tid) {
+  if (t->tid == tid) {
+    found_thread = t;
+  }
 }
