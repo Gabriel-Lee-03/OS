@@ -109,6 +109,7 @@ struct thread
     struct list dead_child_list;
     struct thread *parent;
     struct list_elem child_elem;
+    struct lock* waiting_child_lock;     
 
     struct list_elem allelem;       /* List element for all threads list. */
 

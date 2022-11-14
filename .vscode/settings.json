@@ -15,7 +15,9 @@
         "vaddr.h": "c",
         "random": "c",
         "file.h": "c",
-        "filesys.h": "c"
+        "filesys.h": "c",
+        "process.h": "c",
+        "synch.h": "c"
     },
     "C_Cpp.errorSquiggles": "Enabled"
 }

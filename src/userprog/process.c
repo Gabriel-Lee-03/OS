@@ -17,13 +17,15 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/synch.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 // Task 2
 struct thread* found_thread;
 
-int iterate_dead_children (tid_t target);
+static struct thread* find_thread(struct thread*, tid_t);
+static int iterate_dead_children (tid_t);
 
 struct dead_child_info
   {
@@ -113,12 +115,12 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  //task 2
+  // Task 2
   struct thread *child_thread = NULL;
   struct list_elem *temp_elem;
 
   int temp_exit_status = iterate_dead_children(child_tid);
-  if(temp_exit_status != -2){
+  if(temp_exit_status != -2) {
     return temp_exit_status;
   }
 
@@ -140,7 +142,7 @@ process_wait (tid_t child_tid UNUSED)
     }
   }
 
-  if(child_thread == NULL){
+  if(child_thread == NULL) {
     return -1;
   }
 
@@ -149,37 +151,15 @@ process_wait (tid_t child_tid UNUSED)
   intr_set_level (old_level);
 
   //lock the current thread
+  lock_acquire(&child_thread->waiting_child_lock);
 
   temp_exit_status = iterate_dead_children(child_tid);
-  if(temp_exit_status != -2){
+  if(temp_exit_status != -2) {
     return temp_exit_status;
-  }else{
+  }
+  else {
     return -1;
   }
-}
-
-//task 2
-int iterate_dead_children(tid_t target){
-
-  struct list_elem *temp_elem;
-
-  enum intr_level old_level;
-  old_level = intr_disable ();
-
-  if(!list_empty(&thead_current()->dead_child_list)){
-    for(temp_elem = list_front(&thread_current()->dead_child_list);
-    temp_elem != list_tail(&thread_current()->dead_child_list);
-    temp_elem = list_next(temp_elem)){
-      struct dead_child_info *info = list_entry(temp_elem, struct dead_child_info, elem);
-      if (info->tid == child_tid) {
-        list_remove(info->elem);
-        intr_set_level (old_level);
-        return info->exit_status;
-      }
-    }
-  }
-  intr_set_level (old_level);
-  return -2;
 }
 
 /* Free the current process's resources. */
@@ -214,6 +194,7 @@ process_exit (void)
   list_remove(&thread_current()->child_elem);
   printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
   intr_set_level (old_level);
+  lock_release(thread_current()->waiting_child_lock);
 }
 
 /* Sets up the CPU for running user code in the current
@@ -638,4 +619,29 @@ static struct thread* find_thread(struct thread* t, tid_t tid) {
   if (t->tid == tid) {
     found_thread = t;
   }
+}
+
+// Task 2
+static int iterate_dead_children(tid_t target) {
+
+  struct list_elem *temp_elem;
+
+  enum intr_level old_level;
+  old_level = intr_disable ();
+  struct dead_child_info *info;
+
+  if(!list_empty(&thread_current()->dead_child_list)) {
+    for(temp_elem = list_front(&thread_current()->dead_child_list);
+    temp_elem != list_tail(&thread_current()->dead_child_list);
+    temp_elem = list_next(temp_elem)) {
+      info = list_entry(temp_elem, struct dead_child_info, elem);
+      if (info->tid == target) {
+        list_remove(&info->elem);
+        intr_set_level (old_level);
+        return info->exit_status;
+      }
+    }
+  }
+  intr_set_level (old_level);
+  return -2;
 }
