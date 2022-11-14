@@ -119,6 +119,9 @@ process_wait (tid_t child_tid UNUSED)
     return -1;
   }
 
+  enum intr_level old_level;
+  old_level = intr_disable ();
+
   for (temp_elem = list_front(&thread_current()->child_list);
   temp_elem != list_tail(&thread_current()->child_list);
   temp_elem = list_next(temp_elem)) {
@@ -135,6 +138,8 @@ process_wait (tid_t child_tid UNUSED)
 
   list_remove(&child_thread->child_elem);
 
+  intr_set_level (old_level);
+
   //lock the current thread
 
   temp_exit_status = iterate_dead_children(child_tid);
@@ -150,6 +155,9 @@ int iterate_dead_children(tid_t target){
 
   struct list_elem *temp_elem;
 
+  enum intr_level old_level;
+  old_level = intr_disable ();
+
   if(!list_empty(&thead_current()->dead_child_list)){
     for(temp_elem = list_front(&thread_current()->dead_child_list);
     temp_elem != list_tail(&thread_current()->dead_child_list);
@@ -157,10 +165,12 @@ int iterate_dead_children(tid_t target){
       struct dead_child_info *info = list_entry(temp_elem, struct dead_child_info, elem);
       if (info->tid == child_tid) {
         list_remove(info->elem);
+        intr_set_level (old_level);
         return info->exit_status;
       }
     }
   }
+  intr_set_level (old_level);
   return -2;
 }
 
@@ -168,6 +178,8 @@ int iterate_dead_children(tid_t target){
 void
 process_exit (void)
 {
+  enum intr_level old_level;
+  old_level = intr_disable ();
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
@@ -193,6 +205,7 @@ process_exit (void)
   list_push_back(&thread_current()->parent->dead_child_list, info->elem);
   list_remove(&thread_current()->child_elem)
   printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
+  intr_set_level (old_level);
 }
 
 /* Sets up the CPU for running user code in the current
