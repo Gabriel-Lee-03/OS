@@ -27,13 +27,14 @@ static void sc_close (int);
 static struct file* get_file(int);
 
 // Task 2
+/* Struct for storing and converting file to fd */
 struct file_with_fd {
   struct file* file_ptr;
   int fd;
   struct list_elem elem;
 };
 
-struct lock *file_lock;
+struct lock *file_lock;   /* Lock for sychronizing file actions */
 
 void
 syscall_init (void) 
@@ -183,6 +184,9 @@ static int sc_open (const char *file) {
   if (new_file == NULL) {
     return -1;
   }
+
+  /* Generate new fd for the file and store the conversion 
+     in file_list of current thread */
   new_file_with_fd->file_ptr = new_file;
   new_file_with_fd->fd = list_size(&thread_current()->file_list); 
   list_push_back(&thread_current()->file_list, &new_file_with_fd->elem);
@@ -202,7 +206,9 @@ static int sc_read (int fd, void *buffer, unsigned size) {
 
 static int sc_write (int fd, const void *buffer, unsigned size) {
   lock_acquire(&file_lock);
+  /* Write to console */
   if (fd == 1) {
+    /* Only write 500 characters if */
     if (size > 500) {
       putbuf((char *) buffer, 500);
       lock_release(&file_lock);
@@ -214,6 +220,7 @@ static int sc_write (int fd, const void *buffer, unsigned size) {
       return size;
     }
   }
+  /* Write to file */
   else {
     struct file* file_to_write = get_file(fd);
     int write = file_write(file_to_write, buffer, size);
