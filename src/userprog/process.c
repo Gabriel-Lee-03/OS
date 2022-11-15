@@ -65,6 +65,9 @@ process_execute (const char *file_name)
 
     thread_foreach(find_thread, tid);
     list_push_back(&thread_current()->child_list, &found_thread->child_elem);
+
+    // !!! lock_acquire(&found_thread->waiting_child_lock);
+    // sema_down(&found_thread->waiting_child_sema);
     found_thread->parent = thread_current();
 
     intr_set_level (old_level);
@@ -131,7 +134,6 @@ process_wait (tid_t child_tid UNUSED)
     return -1;
   }
 
-  
   for (temp_elem = list_front(&thread_current()->child_list);
   temp_elem != list_tail(&thread_current()->child_list);
   temp_elem = list_next(temp_elem)) {
@@ -151,7 +153,8 @@ process_wait (tid_t child_tid UNUSED)
   intr_set_level (old_level);
 
   //lock the current thread
-  lock_acquire(&child_thread->waiting_child_lock);
+  // !!! lock_acquire(&child_thread->waiting_child_lock);
+  sema_down(&child_thread->waiting_child_sema);
 
   temp_exit_status = iterate_dead_children(child_tid);
   if(temp_exit_status != -2) {
@@ -194,7 +197,8 @@ process_exit (void)
   list_remove(&thread_current()->child_elem);
   printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
   intr_set_level (old_level);
-  lock_release(thread_current()->waiting_child_lock);
+  // !!! lock_release(thread_current()->waiting_child_lock);
+  sema_up(&thread_current()->waiting_child_sema);
 }
 
 /* Sets up the CPU for running user code in the current

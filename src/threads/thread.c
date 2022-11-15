@@ -631,11 +631,12 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->child_list);
   list_init(&t->dead_child_list);
   t->parent = NULL;
-  // Task 2
-  lock_init(&t->waiting_child_lock);
-  lock_acquire(&t->waiting_child_lock);
 
   old_level = intr_disable ();
+  // Task 2
+  // !!! lock_init(&t->waiting_child_lock);
+  sema_init(&t->waiting_child_sema, 0);
+
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
 }
