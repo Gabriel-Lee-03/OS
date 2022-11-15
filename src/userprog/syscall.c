@@ -33,7 +33,7 @@ struct file_with_fd {
   struct list_elem elem;
 };
 
-struct lock file_lock;
+struct lock *file_lock;
 
 void
 syscall_init (void) 
