@@ -176,8 +176,8 @@ static bool sc_remove (const char *file) {
   return removed;
 }
 
-//add sync
 static int sc_open (const char *file) {
+  lock_acquire(&file_lock);
   struct file_with_fd* new_file_with_fd;
   struct file* new_file = filesys_open(file);
   if (new_file == NULL) {
@@ -186,7 +186,9 @@ static int sc_open (const char *file) {
   new_file_with_fd->file_ptr = new_file;
   new_file_with_fd->fd = list_size(&thread_current()->file_list); 
   list_push_back(&thread_current()->file_list, &new_file_with_fd->elem);
-  return new_file_with_fd->fd;
+  int val = new_file_with_fd->fd;
+  lock_release(&file_lock);
+  return val;
 }
 
 //to do
