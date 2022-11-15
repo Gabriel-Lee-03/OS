@@ -27,12 +27,11 @@ struct thread* found_thread;
 static void find_thread(struct thread*, tid_t);
 static int iterate_dead_children (tid_t);
 
-struct dead_child_info
-  {
-    tid_t tid;
-    int exit_status;
-    struct list_elem elem;
-  };
+struct dead_child_info {
+  tid_t tid;
+  int exit_status;
+  struct list_elem elem;
+};
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -194,11 +193,11 @@ process_exit (void)
       pagedir_destroy (pd);
     }
 
-  /* when a thread dies, so it can still be deleted from memory and have a parent access */
+  /* when a thread dies, so it can stil be deleted from memory and have a parent access */
   /* its exit_status later down the line, we add the tid and exit_status to a struct which */
   /* is stored in the parent threads dead_child_list */
-  struct dead_child_info *info;
-
+  struct dead_child_info info_copy;
+  struct dead_child_info* info = &info_copy;
   info->tid = thread_current()->tid;
   info->exit_status = thread_current()->exit_status;
 
@@ -209,7 +208,6 @@ process_exit (void)
 
   printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
   intr_set_level (old_level);
-  // sema_up(&thread_current()->waiting_child_sema);
 }
 
 /* Sets up the CPU for running user code in the current
@@ -652,14 +650,13 @@ static int iterate_dead_children(tid_t target) {
 
   enum intr_level old_level;
   old_level = intr_disable ();
-  struct dead_child_info *info;
 
-  if(!list_empty(&thread_current()->dead_child_list)) {
-    for(temp_elem = list_front(&thread_current()->dead_child_list);
+  if (!list_empty(&thread_current()->dead_child_list)) {
+    for (temp_elem = list_front(&thread_current()->dead_child_list);
     temp_elem != list_tail(&thread_current()->dead_child_list);
-    temp_elem = list_next(temp_elem)) {
-      info = list_entry(temp_elem, struct dead_child_info, elem);
-      if (info->tid == target) {
+    temp_elem = list_next(&temp_elem)) {
+      struct dead_child_info *info = list_entry(temp_elem, struct dead_child_info, elem);
+      if (&info->tid == target) {
         list_remove(&info->elem);
         intr_set_level (old_level);
         return info->exit_status;

@@ -35,7 +35,7 @@ struct file_with_fd {
   struct list_elem elem;
 };
 
-struct lock *file_lock;   /* Lock for sychronizing file actions */
+struct lock file_lock;   /* Lock for sychronizing file actions */
 
 void
 syscall_init (void) 
@@ -165,21 +165,21 @@ static int sc_wait (pid_t pid) {
 }
 
 static bool sc_create (const char *file, unsigned initial_size) {
-  lock_acquire(file_lock);
+  lock_acquire(&file_lock);
   bool created = filesys_create(file, initial_size);
-  lock_release(file_lock);
+  lock_release(&file_lock);
   return created;
 }
 
 static bool sc_remove (const char *file) {
-  lock_acquire(file_lock);
+  lock_acquire(&file_lock);
   bool removed = filesys_remove(file);
-  lock_release(file_lock);
+  lock_release(&file_lock);
   return removed;
 }
 
 static int sc_open (const char *file) {
-  lock_acquire(file_lock);
+  lock_acquire(&file_lock);
   struct file_with_fd* new_file_with_fd;
   struct file* new_file = filesys_open(file);
   if (new_file == NULL) {
@@ -191,7 +191,7 @@ static int sc_open (const char *file) {
   new_file_with_fd->file_ptr = new_file;
   new_file_with_fd->fd = list_size(&thread_current()->file_list); 
   list_push_back(&thread_current()->file_list, &new_file_with_fd->elem);
-  lock_release(file_lock);
+  lock_release(&file_lock);
   return new_file_with_fd->fd;
 }
 
@@ -206,18 +206,18 @@ static int sc_read (int fd, void *buffer, unsigned size) {
 }
 
 static int sc_write (int fd, const void *buffer, unsigned size) {
-  lock_acquire(file_lock);
+  lock_acquire(&file_lock);
   /* Write to console */
   if (fd == 1) {
     /* Only write 500 characters if */
     if (size > 500) {
       putbuf((char *) buffer, 500);
-      lock_release(file_lock);
+      lock_release(&file_lock);
       return 500;
     }
     else {
       putbuf((char *) buffer, size);
-      lock_release(file_lock);
+      lock_release(&file_lock);
       return size;
     }
   }
@@ -225,7 +225,7 @@ static int sc_write (int fd, const void *buffer, unsigned size) {
   else {
     struct file* file_to_write = get_file(fd);
     int write = file_write(file_to_write, buffer, size);
-    lock_release(file_lock);
+    lock_release(&file_lock);
     return write;
   }
 }
