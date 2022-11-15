@@ -142,6 +142,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 
 // Task 2
 static void sc_halt(void) {
+  shutdown_power_off();
 }
 
 static void sc_exit(int status) {
