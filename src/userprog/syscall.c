@@ -33,9 +33,12 @@ struct file_with_fd {
   struct list_elem elem;
 };
 
+struct lock file_lock;
+
 void
 syscall_init (void) 
 {
+  lock_init(&file_lock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -150,6 +153,7 @@ static void sc_exit(int status) {
   thread_exit();
 }
 
+//to do
 static pid_t sc_exec(const char *cmd_line) {
   return 0;
 }
@@ -158,14 +162,18 @@ static int sc_wait (pid_t pid) {
   return process_wait(pid);
 }
 
-//add sync
 static bool sc_create (const char *file, unsigned initial_size) {
-  return filesys_create(file, initial_size);
+  lock_acquire(&file_lock);
+  bool created = filesys_create(file, initial_size);
+  lock_release(&file_lock);
+  return created;
 }
 
-//add sync
 static bool sc_remove (const char *file) {
-  return filesys_remove(file);
+  lock_acquire(&file_lock);
+  bool removed = filesys_remove(file);
+  lock_release(&file_lock);
+  return removed;
 }
 
 //add sync
