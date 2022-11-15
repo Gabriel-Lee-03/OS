@@ -131,6 +131,7 @@ process_wait (tid_t child_tid UNUSED)
   enum intr_level old_level;
   old_level = intr_disable ();
 
+  /* if a thread doesn't have any children, return -1 */
   if (list_empty(&thread_current()->child_list)) {
     return -1;
   }
@@ -146,6 +147,7 @@ process_wait (tid_t child_tid UNUSED)
     }
   }
 
+  /* if the given child isn't one of the current thread, return -1 */
   if(child_thread == NULL) {
     return -1;
   }
@@ -158,6 +160,7 @@ process_wait (tid_t child_tid UNUSED)
   // !!! lock_acquire(&child_thread->waiting_child_lock);
   sema_down(&child_thread->waiting_child_sema);
 
+  /* gets the exit status from the now dead child */
   temp_exit_status = iterate_dead_children(child_tid);
   if(temp_exit_status != -2) {
     return temp_exit_status;
@@ -192,11 +195,20 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+
+  /* when a thread dies, so it can still be deleted from memory and have a parent access */
+  /* its exit_status later down the line, we add the tid and exit_status to a struct which */
+  /* is stored in the parent threads dead_child_list */
   struct dead_child_info *info;
+
   info->tid = thread_current()->tid;
   info->exit_status = thread_current()->exit_status;
+
   list_push_back(&thread_current()->parent->dead_child_list, &info->elem);
+
+  /* when a child dies, remove from the child list as it can now be added to the dead one */
   list_remove(&thread_current()->child_elem);
+
   printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
   intr_set_level (old_level);
   // !!! lock_release(thread_current()->waiting_child_lock);
@@ -309,7 +321,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   // Task 2
-  //("Filename: %s\n", file_name);
+  /* splits the old file name into its actual name and args */
   char* token;
   char *save_ptr;
   char* argv[100];
@@ -555,9 +567,9 @@ setup_stack (void **esp, char* argv, int argc)
         
         uint8_t total_size = 0;
         uint32_t *arg_address[argc];
-        // Set up stack
-        for (int i = argc - 1; i >= 0; i--) {
-          // printf("Argv %d: %s\n", i, argv[i]);            
+        
+        /* loops through the args in reverse order and adds them to the stack */
+        for (int i = argc - 1; i >= 0; i--) {       
           int len_arg = (strlen(&argv[i]) + 1) * sizeof(char);
           total_size += (uint8_t) len_arg;
           *esp -= len_arg;
@@ -565,6 +577,7 @@ setup_stack (void **esp, char* argv, int argc)
           arg_address[i] = (uint32_t *) *esp;
         }
 
+        /* adds the buffer bytes */
         while (total_size % 4 != 0) {
           *esp -= sizeof(char);
           uint8_t word_align = 0;
@@ -572,27 +585,32 @@ setup_stack (void **esp, char* argv, int argc)
           total_size += (uint8_t) sizeof(char);
         }
 
+        /* adds a 0 byte for arg 4 */
         *esp -= sizeof(int);
         char *zero_char = 0;
         memcpy(*esp, &zero_char, sizeof(int));
-        
+
+        /* adds the address for each arg in the added order */
         for (int i = argc - 1; i >= 0; i--) {
           *esp -= sizeof(int);
           memcpy(*esp, &arg_address[i], sizeof(int));
         }
         uint32_t curr_address = (uint32_t) *esp;
 
+        /* adds the address to to address of the first arg */
         *esp -= sizeof(int);
         memcpy(*esp, &curr_address, sizeof(int));
 
+        /* adds the argc */
         *esp -= sizeof(int);
         memcpy(*esp, &argc, sizeof(int));
 
+        /* adds the fake return address */
         *esp -= sizeof(int);
         void *zero_void = 0;
         memcpy(*esp, &zero_void, sizeof(int));
         
-        hex_dump(esp, esp, PHYS_BASE - *esp, 0);
+        //hex_dump(esp, esp, PHYS_BASE - *esp, 0);
       }
       else
         palloc_free_page (kpage);
@@ -621,6 +639,7 @@ install_page (void *upage, void *kpage, bool writable)
 }
 
 // Task 2
+/* saves global found_thread if it matches tid's */
 static struct thread* find_thread(struct thread* t, tid_t tid) {
   if (t->tid == tid) {
     found_thread = t;
@@ -628,6 +647,8 @@ static struct thread* find_thread(struct thread* t, tid_t tid) {
 }
 
 // Task 2
+/* searches a threads dead_child_list to match the tid and return its exit status */
+/* if it doesnt exist, return -2 */
 static int iterate_dead_children(tid_t target) {
 
   struct list_elem *temp_elem;
