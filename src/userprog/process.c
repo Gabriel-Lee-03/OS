@@ -24,7 +24,7 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 // Task 2
 struct thread* found_thread;
 
-static struct thread* find_thread(struct thread*, tid_t);
+static void find_thread(struct thread*, tid_t);
 static int iterate_dead_children (tid_t);
 
 struct dead_child_info
@@ -66,7 +66,6 @@ process_execute (const char *file_name)
     thread_foreach(find_thread, tid);
     list_push_back(&thread_current()->child_list, &found_thread->child_elem);
 
-    // !!! lock_acquire(&found_thread->waiting_child_lock);
     // sema_down(&found_thread->waiting_child_sema);
     found_thread->parent = thread_current();
 
@@ -157,7 +156,6 @@ process_wait (tid_t child_tid UNUSED)
   intr_set_level (old_level);
 
   //lock the current thread
-  // !!! lock_acquire(&child_thread->waiting_child_lock);
   sema_down(&child_thread->waiting_child_sema);
 
   /* gets the exit status from the now dead child */
@@ -211,7 +209,6 @@ process_exit (void)
 
   printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
   intr_set_level (old_level);
-  // !!! lock_release(thread_current()->waiting_child_lock);
   // sema_up(&thread_current()->waiting_child_sema);
 }
 
@@ -640,7 +637,7 @@ install_page (void *upage, void *kpage, bool writable)
 
 // Task 2
 /* saves global found_thread if it matches tid's */
-static struct thread* find_thread(struct thread* t, tid_t tid) {
+static void find_thread(struct thread* t, tid_t tid) {
   if (t->tid == tid) {
     found_thread = t;
   }

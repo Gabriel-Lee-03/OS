@@ -92,16 +92,7 @@ struct thread
     enum thread_status status;      /* Thread state. */
     char name[16];                  /* Name (for debugging purposes). */
     uint8_t *stack;                 /* Saved stack pointer. */
-    // Task 1
-    int base_priority;              /* Priority without donation */
-
-    // Task 1
-    int effective_priority;         /* Priority after donation */              
-    int nice;                       /* Nice value */
-    int32_t recent_cpu;             /* Estimate of recently used CPU time */
-    struct lock* waiting_lock;      /* A lock that the thread is waiting */
-    struct list held_locks;         
-    /* A list of locks that the thread is holding */
+    int priority;                   /* Priority without donation */
 
     // Task 2
     struct list file_list;
@@ -109,8 +100,7 @@ struct thread
     struct list dead_child_list;
     struct thread *parent;
     struct list_elem child_elem;
-    // !!! struct lock* waiting_child_lock; 
-    struct semaphore* waiting_child_sema;
+    struct semaphore *waiting_child_sema;
 
     struct list_elem allelem;       /* List element for all threads list. */
 
@@ -166,8 +156,6 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
-// Task 1
-void thread_set_effective_priority (struct thread*, int);
 
 int thread_get_nice (void);
 void thread_set_nice (int);
@@ -177,10 +165,5 @@ int thread_get_load_avg (void);
 // Task 0
 bool compare_wake_ticks_less (const struct list_elem *,
                               const struct list_elem *, void *aux);
-
-// Task 1
-bool compare_priority_thread (const struct list_elem *, 
-    const struct list_elem *, bool);
-void update_priority(void);
 
 #endif /* threads/thread.h */

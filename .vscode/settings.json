@@ -17,7 +17,8 @@
         "file.h": "c",
         "filesys.h": "c",
         "process.h": "c",
-        "synch.h": "c"
+        "synch.h": "c",
+        "shutdown.h": "c"
     },
     "C_Cpp.errorSquiggles": "Enabled"
 }
