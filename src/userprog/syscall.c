@@ -158,14 +158,17 @@ static int sc_wait (pid_t pid) {
   return process_wait(pid);
 }
 
+//add sync
 static bool sc_create (const char *file, unsigned initial_size) {
   return filesys_create(file, initial_size);
 }
 
+//add sync
 static bool sc_remove (const char *file) {
   return filesys_remove(file);
 }
 
+//add sync
 static int sc_open (const char *file) {
   struct file_with_fd* new_file_with_fd;
   struct file* new_file = filesys_open(file);
@@ -178,10 +181,12 @@ static int sc_open (const char *file) {
   return new_file_with_fd->fd;
 }
 
+//to do
 static int sc_filesize (int fd) {
   return 0;
 }
 
+//to do
 static int sc_read (int fd, void *buffer, unsigned size) {
   return 0;
 }
@@ -203,14 +208,17 @@ static int sc_write (int fd, const void *buffer, unsigned size) {
   }
 }
 
+//to do
 static void sc_seek (int fd, unsigned position) {
 
 }
 
+//to do
 static unsigned sc_tell (int fd) {
   return (unsigned) 0;
 }
 
+//to do
 static void sc_close (int fd) {
 
 }
