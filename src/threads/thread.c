@@ -358,6 +358,9 @@ thread_exit (void)
 {
   ASSERT (!intr_context ());
 
+  // Task 2
+  sema_up(&thread_current()->waiting_child_sema);
+
 #ifdef USERPROG
   process_exit ();
 #endif

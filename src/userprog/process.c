@@ -122,6 +122,7 @@ process_wait (tid_t child_tid UNUSED)
   struct thread *child_thread = NULL;
   struct list_elem *temp_elem;
 
+  /* Check if child thread is dead */
   int temp_exit_status = iterate_dead_children(child_tid);
   if(temp_exit_status != -2) {
     return temp_exit_status;
@@ -134,6 +135,7 @@ process_wait (tid_t child_tid UNUSED)
     return -1;
   }
 
+  /* Find child thread from child_list of current thread */
   for (temp_elem = list_front(&thread_current()->child_list);
   temp_elem != list_tail(&thread_current()->child_list);
   temp_elem = list_next(temp_elem)) {
@@ -198,7 +200,7 @@ process_exit (void)
   printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
   intr_set_level (old_level);
   // !!! lock_release(thread_current()->waiting_child_lock);
-  sema_up(&thread_current()->waiting_child_sema);
+  // sema_up(&thread_current()->waiting_child_sema);
 }
 
 /* Sets up the CPU for running user code in the current
