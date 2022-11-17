@@ -9,6 +9,8 @@
 #include "filesys/filesys.h"
 #include "threads/synch.h"
 #include "devices/shutdown.h"
+#include "devices/input.h"
+#include <stdlib.h>
 
 // Task 2
 static void syscall_handler (struct intr_frame *);
@@ -157,7 +159,7 @@ static void sc_exit(int status) {
 
 //to do
 static pid_t sc_exec(const char *cmd_line) {
-  return 0;
+  return process_execute(cmd_line);
 }
 
 static int sc_wait (pid_t pid) {
@@ -197,19 +199,38 @@ static int sc_open (const char *file) {
 
 //to do
 static int sc_filesize (int fd) {
-  return 0;
+  struct file *file = get_file(fd);
+  lock_acquire(&file_lock);
+  int size = file_length(file);
+  lock_release(&file_lock);
+  return size;
 }
 
 //to do
 static int sc_read (int fd, void *buffer, unsigned size) {
-  return 0;
+  if (fd == 0){
+    uint8_t *temp_buff = (uint8_t *) buffer;
+    for (int i = 0; i < size; i++) {
+      temp_buff[i] = input_getc();
+    }
+    return size;
+  }
+  
+  if (fd > 0) {
+    lock_acquire(&file_lock);
+    off_t size_read = file_read(fd, buffer, size);
+    lock_release(&file_lock);
+    return size_read;
+  }
+
+  return -1;
 }
 
 static int sc_write (int fd, const void *buffer, unsigned size) {
   lock_acquire(&file_lock);
   /* Write to console */
   if (fd == 1) {
-    /* Only write 500 characters if */
+    /* Only write 500 characters if it contains more than 500 */
     if (size > 500) {
       putbuf((char *) buffer, 500);
       lock_release(&file_lock);
@@ -232,17 +253,35 @@ static int sc_write (int fd, const void *buffer, unsigned size) {
 
 //to do
 static void sc_seek (int fd, unsigned position) {
+  if (fd < 1) {
+    return;
+  }
 
+  struct file *file = get_file(fd);
+  if(!file) {
+    return;
+  }
+  
+  lock_acquire(&file_lock);
+  file_seek(file, position);
+  lock_release(&file_lock);
+  
 }
 
 //to do
 static unsigned sc_tell (int fd) {
-  return (unsigned) 0;
+
+  struct file *file = get_file(fd);
+  
+  lock_acquire(&file_lock);
+  off_t pos = file_tell(file);
+  lock_release(&file_lock);
+  return pos;
 }
 
 //to do
 static void sc_close (int fd) {
-
+  return 0;
 }
 
 static struct file* get_file(int fd) {
