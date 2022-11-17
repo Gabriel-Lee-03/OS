@@ -98,7 +98,7 @@ struct thread
     // Task 2
     struct list file_list;
     struct list child_list;
-    struct list dead_child_list;
+    struct list dead_child_list;    /* A list of dead_child_info */
     struct thread *parent;
     struct list_elem child_elem;
     struct semaphore waiting_child_sema;

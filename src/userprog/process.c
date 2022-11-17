@@ -65,7 +65,6 @@ process_execute (const char *file_name)
     thread_foreach(find_thread, tid);
     list_push_back(&thread_current()->child_list, &found_thread->child_elem);
 
-    // sema_down(&found_thread->waiting_child_sema);
     found_thread->parent = thread_current();
 
     intr_set_level (old_level);
@@ -196,15 +195,25 @@ process_exit (void)
   /* when a thread dies, so it can stil be deleted from memory and have a parent access */
   /* its exit_status later down the line, we add the tid and exit_status to a struct which */
   /* is stored in the parent threads dead_child_list */
-  struct dead_child_info info_copy;
-  struct dead_child_info* info = &info_copy;
-  info->tid = thread_current()->tid;
-  info->exit_status = thread_current()->exit_status;
 
-  list_push_back(&thread_current()->parent->dead_child_list, &info->elem);
+  if (thread_current()->parent != NULL) {
+    struct dead_child_info* info = malloc(sizeof(struct dead_child_info));
 
+    info->tid = thread_current()->tid;
+    info->exit_status = thread_current()->exit_status;
+    list_push_back(&thread_current()->parent->dead_child_list, &info->elem);
+  }
   /* when a child dies, remove from the child list as it can now be added to the dead one */
   list_remove(&thread_current()->child_elem);
+
+  if (!list_empty(&thread_current()->dead_child_list)) {
+    for (struct list_elem* temp_elem = list_front(&thread_current()->dead_child_list);
+    temp_elem != list_tail(&thread_current()->dead_child_list);
+    temp_elem = list_next(&temp_elem)) {
+      struct dead_child_info *info = list_entry(temp_elem, struct dead_child_info, elem);
+      free(info);
+    }
+  }
 
   printf("%s: exit(%d)\n", thread_current()->name, thread_current()->exit_status);
   intr_set_level (old_level);
@@ -656,7 +665,7 @@ static int iterate_dead_children(tid_t target) {
     temp_elem != list_tail(&thread_current()->dead_child_list);
     temp_elem = list_next(&temp_elem)) {
       struct dead_child_info *info = list_entry(temp_elem, struct dead_child_info, elem);
-      if (&info->tid == target) {
+      if (info->tid == target) {
         list_remove(&info->elem);
         intr_set_level (old_level);
         return info->exit_status;
