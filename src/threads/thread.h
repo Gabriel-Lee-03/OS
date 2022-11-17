@@ -23,12 +23,14 @@ typedef int tid_t;
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
-#define PRI_MAX 63                      /* Highest priority. */
+#define PRI_MAX 63                      /* Highest priority. */                   
 
-// Task 1 BSD
-/* For fixed point real arithmetic, the constant ratio from integer 
-   to 32-bit fixed point number. */
-#define F (1<<14)                       
+struct child_info {
+  tid_t tid;
+  int exit_status;
+  struct semaphore waiting_child_sema;
+  struct list_elem elem;
+};
 
 /* A kernel thread or user process.
 
@@ -98,10 +100,10 @@ struct thread
     // Task 2
     struct list file_list;
     struct list child_list;
-    struct list dead_child_list;    /* A list of dead_child_info */
+    struct list dead_child_list;    /* A list of child_info */
     struct thread *parent;
     struct list_elem child_elem;
-    struct semaphore waiting_child_sema;
+    struct child_info *info;
 
     struct list_elem allelem;       /* List element for all threads list. */
 

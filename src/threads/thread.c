@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 
 // Task 1
 #include "devices/timer.h"
@@ -215,6 +216,10 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
+  // Task 2
+  t->info = malloc(sizeof(struct child_info));
+  sema_init(&t->info->waiting_child_sema, 0);
+
   intr_set_level (old_level);
 
   /* Add to run queue. */
@@ -300,9 +305,6 @@ void
 thread_exit (void) 
 {
   ASSERT (!intr_context ());
-
-  // Task 2
-  sema_up(&thread_current()->waiting_child_sema);
 
 #ifdef USERPROG
   process_exit ();
@@ -471,7 +473,6 @@ static void
 init_thread (struct thread *t, const char *name, int priority)
 {
   enum intr_level old_level;
-
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
@@ -493,8 +494,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->parent = NULL;
 
   old_level = intr_disable ();
-  // Task 2
-  sema_init(&t->waiting_child_sema, 0);
 
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);

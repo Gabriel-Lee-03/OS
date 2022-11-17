@@ -18,6 +18,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/synch.h"
+#include "threads/malloc.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -26,12 +27,6 @@ struct thread* found_thread;
 
 static void find_thread(struct thread*, tid_t);
 static int iterate_dead_children (tid_t);
-
-struct dead_child_info {
-  tid_t tid;
-  int exit_status;
-  struct list_elem elem;
-};
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -90,8 +85,11 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
+  if (!success) {
+    sema_up(&thread_current()->info->waiting_child_sema);
     thread_exit ();
+  }
+
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -119,14 +117,14 @@ process_wait (tid_t child_tid UNUSED)
   struct thread *child_thread = NULL;
   struct list_elem *temp_elem;
 
+  enum intr_level old_level;
+  old_level = intr_disable ();
+
   /* Check if child thread is dead */
   int temp_exit_status = iterate_dead_children(child_tid);
   if(temp_exit_status != -2) {
     return temp_exit_status;
   }
-
-  enum intr_level old_level;
-  old_level = intr_disable ();
 
   /* if a thread doesn't have any children, return -1 */
   if (list_empty(&thread_current()->child_list)) {
@@ -151,10 +149,10 @@ process_wait (tid_t child_tid UNUSED)
 
   list_remove(&child_thread->child_elem);
 
-  intr_set_level (old_level);
+  intr_set_level (old_level);   // !!! Move after sema_down
 
   //lock the current thread
-  sema_down(&child_thread->waiting_child_sema);
+  sema_down(&child_thread->info->waiting_child_sema);
 
   /* gets the exit status from the now dead child */
   temp_exit_status = iterate_dead_children(child_tid);
@@ -197,11 +195,14 @@ process_exit (void)
   /* is stored in the parent threads dead_child_list */
 
   if (thread_current()->parent != NULL) {
-    struct dead_child_info* info = malloc(sizeof(struct dead_child_info));
+    thread_current()->info->tid = thread_current()->tid;
+    thread_current()->info->exit_status = thread_current()->exit_status;
+    list_push_back(&thread_current()->parent->dead_child_list, &thread_current()->info->elem);
 
-    info->tid = thread_current()->tid;
-    info->exit_status = thread_current()->exit_status;
-    list_push_back(&thread_current()->parent->dead_child_list, &info->elem);
+    sema_up(&thread_current()->info->waiting_child_sema);
+  }
+  else {
+    free(thread_current()->info);
   }
   /* when a child dies, remove from the child list as it can now be added to the dead one */
   list_remove(&thread_current()->child_elem);
@@ -210,7 +211,7 @@ process_exit (void)
     for (struct list_elem* temp_elem = list_front(&thread_current()->dead_child_list);
     temp_elem != list_tail(&thread_current()->dead_child_list);
     temp_elem = list_next(&temp_elem)) {
-      struct dead_child_info *info = list_entry(temp_elem, struct dead_child_info, elem);
+      struct child_info *info = list_entry(temp_elem, struct child_info, elem);
       free(info);
     }
   }
@@ -325,7 +326,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   // Task 2
-  /* splits the old file name into its actual name and args */
+  // splits the old file name into its actual name and args
   char* token;
   char *save_ptr;
   char* argv[100];
@@ -566,9 +567,8 @@ setup_stack (void **esp, char* argv, int argc)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success) {
-        // Task 2 fake setup
         *esp = PHYS_BASE;
-        
+
         uint8_t total_size = 0;
         uint32_t *arg_address[argc];
         
@@ -664,7 +664,7 @@ static int iterate_dead_children(tid_t target) {
     for (temp_elem = list_front(&thread_current()->dead_child_list);
     temp_elem != list_tail(&thread_current()->dead_child_list);
     temp_elem = list_next(&temp_elem)) {
-      struct dead_child_info *info = list_entry(temp_elem, struct dead_child_info, elem);
+      struct child_info *info = list_entry(temp_elem, struct child_info, elem);
       if (info->tid == target) {
         list_remove(&info->elem);
         intr_set_level (old_level);
