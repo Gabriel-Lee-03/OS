@@ -159,7 +159,7 @@ static void sc_exit(int status) {
 
 //to do
 static pid_t sc_exec(const char *cmd_line) {
-  return process_execute;
+  return process_execute(cmd_line);
 }
 
 static int sc_wait (pid_t pid) {
@@ -209,8 +209,9 @@ static int sc_filesize (int fd) {
 //to do
 static int sc_read (int fd, void *buffer, unsigned size) {
   if (fd == 0){
+    uint8_t *temp_buff = (uint8_t *) buffer;
     for (int i = 0; i < size; i++) {
-      buffer[i] = input_getc();
+      temp_buff[i] = input_getc();
     }
     return size;
   }
