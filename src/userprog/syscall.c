@@ -278,7 +278,31 @@ static unsigned sc_tell (int fd) {
 
 //to do
 static void sc_close (int fd) {
-  return 0;
+  lock_acquire(&file_lock);
+
+  /* if the list is empty, return straight away*/
+  if (list_empty(&thread_current()->file_list)) {
+    lock_release(&file_lock);
+    return;
+  }
+
+  /* loop through the threads file list, if the fd matches, close the file and remove it from the list the return */
+  struct list_elem *temp_elem;
+  for (temp_elem = list_front(&thread_current()->file_list);
+    temp_elem != list_tail(&thread_current()->file_list);
+    temp_elem = list_next(&temp_elem)) {
+      struct file_with_fd *f = list_entry (temp, struct file_with_fd, elem);
+      if (f->fd == fd){
+        file_close(f->file_ptr);
+        list_remove(f->elem);
+        lock_release(&file_lock);
+        return;
+      }
+    }
+
+    /* if the file wasn't found, release the lock then return */
+    lock_release(&file_lock);
+    return;
 }
 
 static struct file* get_file(int fd) {
