@@ -21,7 +21,8 @@
         "shutdown.h": "c",
         "init.h": "c",
         "gdt.h": "c",
-        "input.h": "c"
+        "input.h": "c",
+        "debug.h": "c"
     },
     "C_Cpp.errorSquiggles": "Enabled"
 }

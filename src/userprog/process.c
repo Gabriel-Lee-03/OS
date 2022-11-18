@@ -114,6 +114,7 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  // while (true);
   // Task 2
   struct thread *child_thread = NULL;
   struct list_elem *temp_elem;
@@ -300,7 +301,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp, char* argv, int argc);
+static bool setup_stack (void **esp, char*);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -325,27 +326,17 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (t->pagedir == NULL) 
     goto done;
   process_activate ();
-  // Task 2
-  // splits the old file name into its actual name and args
-  
-  char* token;
-  char* save_ptr;
-  char* argv[100];
-  int argc = 0;
-  for (token = strtok_r(file_name, " ", &save_ptr);
-      token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
-    argv[argc] = token;
-    argc++;
-  }
 
-  //struct file *f = filesys_open("args-none");
+  char* save_ptr;
+  char* token = strtok_r(file_name, " ", &save_ptr);
+
   lock_acquire(&file_lock);
 
   /* Open executable file. */
-  file = filesys_open (argv[0]);
+  file = filesys_open (token);
   if (file == NULL) 
     {
-      printf ("load: %s: open failed\n", argv[0]);
+      printf ("load: %s: open failed\n", token);
       goto done; 
     }
 
@@ -422,7 +413,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp, (char *)argv, argc))
+  if (!setup_stack (esp, file_name))
     goto done;
 
   /* Start address. */
@@ -562,10 +553,26 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp, char* argv, int argc) 
+setup_stack (void **esp, char* file_name) 
 {
   uint8_t *kpage;
   bool success = false;
+
+  // Task 2
+  // splits the old file name into its actual name and args
+  
+  char* token;
+  char* save_ptr;
+  char* argv[100];
+
+  int argc = 0;
+  for (token = strtok_r(file_name, " ", &save_ptr);
+      token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
+    argv[argc] = token;
+    argc++;
+  }
+
+  printf("argv[0]: %s\n", argv[0]);
 
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
@@ -584,6 +591,7 @@ setup_stack (void **esp, char* argv, int argc)
           *esp -= len_arg;
           memcpy(*esp, &argv[i], len_arg);
           arg_address[i] = (uint32_t *) *esp;
+
         }
 
         /* adds the buffer bytes */
@@ -619,11 +627,13 @@ setup_stack (void **esp, char* argv, int argc)
         void *zero_void = 0;
         memcpy(*esp, &zero_void, sizeof(int));
         
-        //hex_dump(esp, esp, PHYS_BASE - *esp, 0);
+        hex_dump(esp, esp, PHYS_BASE - *esp, 0);
       }
       else
         palloc_free_page (kpage);
       }
+
+  free(argv);
   return success;
 }
 
