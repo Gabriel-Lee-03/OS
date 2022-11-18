@@ -328,15 +328,19 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   char* save_ptr;
-  char* token = strtok_r(file_name, " ", &save_ptr);
+  char* fn_copy = malloc(strlen(file_name)+1);
+  strlcpy(fn_copy, file_name, strlen(file_name)+1);
+  char* token = strtok_r(fn_copy, " ", &save_ptr);
 
   lock_acquire(&file_lock);
 
   /* Open executable file. */
   file = filesys_open (token);
+  free(fn_copy);
+  
   if (file == NULL) 
     {
-      printf ("load: %s: open failed\n", token);
+      printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
 
