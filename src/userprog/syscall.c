@@ -179,19 +179,19 @@ static bool sc_remove (const char *file) {
 
 /* opens the file with the corresponding name, returns -1 if the file doesnt exist or the fd otherwise */
 static int sc_open (const char *file) {
+  struct file_with_fd* new_file_with_fd = malloc(sizeof(struct file_with_fd));
   lock_acquire(&file_lock);
-  struct file_with_fd* new_file_with_fd;
   struct file* new_file = filesys_open(file);
+  lock_release(&file_lock);
   if (new_file == NULL) {
     return -1;
   }
 
   /* Generate new fd for the file and store the conversion 
      in file_list of current thread */
-  new_file_with_fd->file_ptr = new_file;
-  new_file_with_fd->fd = list_size(&thread_current()->file_list); 
+  new_file_with_fd->file_ptr = &new_file;
+  new_file_with_fd->fd = list_size(&thread_current()->file_list)+2; 
   list_push_back(&thread_current()->file_list, &new_file_with_fd->elem);
-  lock_release(&file_lock);
   return new_file_with_fd->fd;
 }
 
