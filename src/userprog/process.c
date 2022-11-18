@@ -46,11 +46,14 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
-  // Task 2
-  char *token = strtok_r(file_name, " ", &file_name);
+  char *save_ptr;
+  char *fn_copy2 = malloc(strlen(file_name) + 1);
+  strlcpy (fn_copy2, file_name, strlen(file_name) + 1);
+  char *token = strtok_r(fn_copy2, " ", &save_ptr);
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
+  free(fn_copy2);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   else {

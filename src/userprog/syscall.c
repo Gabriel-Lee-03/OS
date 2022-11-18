@@ -171,6 +171,19 @@ static void sc_exit(int status) {
 
 /* runs process_execute on the program with the corresponding file name */
 static pid_t sc_exec(const char *cmd_line) {
+  lock_acquire(&file_lock);
+  char* file_name = malloc (strlen(cmd_line) + 1);
+  char* save_ptr;
+	strlcpy(file_name, cmd_line, strlen(cmd_line) + 1);
+	file_name = strtok_r(file_name, " ", &save_ptr);
+
+  struct file* f = filesys_open (file_name);
+  if (f == NULL) {
+    lock_release(&file_lock);
+    return -1;
+  }
+  file_close(f);
+  lock_release(&file_lock);
   return process_execute(cmd_line);
 }
 
