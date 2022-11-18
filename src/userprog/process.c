@@ -62,6 +62,7 @@ process_execute (const char *file_name)
     list_push_back(&thread_current()->child_list, &found_thread->child_elem);
 
     found_thread->parent = thread_current();
+    sema_down(&found_thread->info->waiting_child_sema);
 
     intr_set_level (old_level);
   }
@@ -337,7 +338,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Open executable file. */
   file = filesys_open (token);
   free(fn_copy);
-  
+
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);
