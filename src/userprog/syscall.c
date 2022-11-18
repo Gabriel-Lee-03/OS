@@ -4,6 +4,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "userprog/process.h"
+#include "userprog/pagedir.h"
 #include "threads/vaddr.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
@@ -29,6 +30,7 @@ static void sc_seek (int, unsigned);
 static unsigned sc_tell (int);
 static void sc_close (int);
 static struct file* get_file(int);
+static void* check_mem_access(const void *);
 
 // Task 2
 /* Struct for storing and converting file to fd */
@@ -51,6 +53,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 {
   /* gets the value of the system call*/
   int syscall_num = *((int*)f->esp);
+  check_mem_access(f->esp);
 
   int status;
   char *file;
@@ -68,42 +71,53 @@ syscall_handler (struct intr_frame *f UNUSED)
     break;
 
   case SYS_EXIT:
+    check_mem_access(f->esp + 1);
     status = *(((int*)f->esp) + 1);
     sc_exit(status);
     break;
 
   case SYS_EXEC:
+    check_mem_access(f->esp + 1);
     cmd_line = *(((char**)f->esp) + 1); // first argv
     f->eax = (uint32_t) sc_exec(cmd_line);
     break;
 
   case SYS_WAIT:
+    check_mem_access(f->esp + 1);
     pid = *(((int*)f->esp) + 1);
     f->eax = (uint32_t) sc_wait(pid);
     break;
 
   case SYS_CREATE:
+    check_mem_access(f->esp + 1);
+    check_mem_access(f->esp + 2);
     file = *(((char**)f->esp) + 1);
     initial_size = *(((int*)f->esp) + 2);
     f->eax = (uint32_t) sc_create(file, initial_size);
     break;
     
   case SYS_REMOVE:
+    check_mem_access(f->esp + 1);
     file = *(((char**)f->esp) + 1);
     f->eax = (uint32_t) sc_remove(file);
     break;
 
   case SYS_OPEN:
+    check_mem_access(f->esp + 1);
     file = *(((char**)f->esp) + 1);
     f->eax = (uint32_t) sc_open(file);
     break;
 
   case SYS_FILESIZE:
+    check_mem_access(f->esp + 1);
     fd = *(((int*)f->esp) + 1);
     f->eax = (uint32_t) sc_filesize(fd);
     break;
     
   case SYS_READ:
+    check_mem_access(f->esp + 1);
+    check_mem_access(f->esp + 2);
+    check_mem_access(f->esp + 3);
     fd = *(((int*)f->esp) + 1);
     buffer = *(((int**)f->esp) + 2);
     size = *(((unsigned*)f->esp) + 3);
@@ -111,6 +125,9 @@ syscall_handler (struct intr_frame *f UNUSED)
     break; 
 
   case SYS_WRITE:
+    check_mem_access(f->esp + 1);
+    check_mem_access(f->esp + 2);
+    check_mem_access(f->esp + 3);
     fd = *(((int*)f->esp) + 1);
     buffer = *(((int**)f->esp) + 2);
     size = *(((int*)f->esp) + 3);
@@ -118,17 +135,21 @@ syscall_handler (struct intr_frame *f UNUSED)
     break;
 
   case SYS_SEEK:
+    check_mem_access(f->esp + 1);
+    check_mem_access(f->esp + 2);
     fd = *(((int*)f->esp) + 1);
     position = *(((unsigned*)f->esp) + 2);
     sc_seek(fd, position);
     break;
 
   case SYS_TELL:
+    check_mem_access(f->esp + 1);
     fd = *(((int*)f->esp) + 1);
     f->eax = (uint32_t) sc_tell(fd);
     break;
     
   case SYS_CLOSE:
+    check_mem_access(f->esp + 1);
     fd = *(((int*)f->esp) + 1);
     sc_close(fd);
     break; 
@@ -314,4 +335,18 @@ static struct file* get_file(int fd) {
     curr_elem = curr_elem->next;
   }
   return list_entry(curr_elem, struct file_with_fd, elem)->file_ptr;
+}
+
+static void* check_mem_access(const void *vaddr)
+{
+	if (!is_user_vaddr(vaddr)) {
+		sc_exit(-1);
+		return 0;
+	}
+	void *ptr = pagedir_get_page(thread_current()->pagedir, vaddr);
+	if (!ptr)	{
+		sc_exit(-1);
+		return 0;
+	}
+	return ptr;
 }
