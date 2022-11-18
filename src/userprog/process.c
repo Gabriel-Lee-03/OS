@@ -124,7 +124,7 @@ process_wait (tid_t child_tid UNUSED)
 
   /* Check if child thread is dead */
   int temp_exit_status = iterate_dead_children(child_tid);
-  if(temp_exit_status != -2) {
+  if (temp_exit_status != -2) {
     return temp_exit_status;
   }
 
@@ -145,7 +145,7 @@ process_wait (tid_t child_tid UNUSED)
   }
 
   /* if the given child isn't one of the current thread, return -1 */
-  if(child_thread == NULL) {
+  if (child_thread == NULL) {
     return -1;
   }
 
@@ -158,7 +158,7 @@ process_wait (tid_t child_tid UNUSED)
 
   /* gets the exit status from the now dead child */
   temp_exit_status = iterate_dead_children(child_tid);
-  if(temp_exit_status != -2) {
+  if (temp_exit_status != -2) {
     return temp_exit_status;
   }
   else {
