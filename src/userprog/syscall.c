@@ -59,7 +59,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     return;
   }
   */
-  int syscall_num = (int)f->esp;
+  int syscall_num = *((int*)f->esp);
 
   int status;
   char *file;
@@ -77,68 +77,68 @@ syscall_handler (struct intr_frame *f UNUSED)
     break;
 
   case SYS_EXIT:
-    status = (int)(f->esp) + 1;
+    status = *((int*)f->esp) + 1;
     sc_exit(status);
     break;
 
   case SYS_EXEC:
-    cmd_line = (char *)((int)(f->esp) + 1); // first argv
+    cmd_line = *(((char*)f->esp) + 1); // first argv
     f->eax = (uint32_t) sc_exec(cmd_line);
     break;
 
   case SYS_WAIT:
-    pid = (int)(f->esp) + 1;
+    pid = *(((int*)f->esp) + 1);
     f->eax = (uint32_t) sc_wait(pid);
     break;
 
   case SYS_CREATE:
-    file = (char *)((int)(f->esp) + 1);
-    initial_size = (int)(f->esp) + 2;
+    file = *(((char*)f->esp) + 1);
+    initial_size = *(((int*)f->esp) + 2);
     f->eax = (uint32_t) sc_create(file, initial_size);
     break;
     
   case SYS_REMOVE:
-    file = (char *)((int)(f->esp) + 1);
+    file = *(((char*)f->esp) + 1);
     f->eax = (uint32_t) sc_remove(file);
     break;
 
   case SYS_OPEN:
-    file = (char *)((int)(f->esp) + 1);
+    file = *(((char*)f->esp) + 1);
     f->eax = (uint32_t) sc_open(file);
     break;
 
   case SYS_FILESIZE:
-    fd = (int)(f->esp) + 1;
+    fd = *(((int*)f->esp) + 1);
     f->eax = (uint32_t) sc_filesize(fd);
     break;
     
   case SYS_READ:
-    fd = (int)(f->esp) + 1;
-    buffer = (int)(f->esp) + 2;
-    size = (int)(f->esp) + 3;
+    fd = *(((int*)f->esp) + 1);
+    buffer = *(((int*)f->esp) + 2);
+    size = *(((int*)f->esp) + 3);
     f->eax = (uint32_t) sc_read(fd, buffer, size);
     break; 
 
   case SYS_WRITE:
-    fd = (int)(f->esp) + 1;
-    buffer = (int)(f->esp) + 2;
-    size = (int)(f->esp) + 3;
+    fd = *(((int*)f->esp) + 1);
+    buffer = *(((int*)f->esp) + 2);
+    size = *(((int*)f->esp) + 3);
     f->eax = (uint32_t) sc_write(fd, buffer, size);
     break;
 
   case SYS_SEEK:
-    fd = (int)(f->esp) + 1;
-    position = (int)(f->esp) + 2;
+    fd = *(((int*)f->esp) + 1);
+    position = *(((int*)f->esp) + 2);
     sc_seek(fd, position);
     break;
 
   case SYS_TELL:
-    fd = (int)(f->esp) + 1;
+    fd = *(((int*)f->esp) + 1);
     f->eax = (uint32_t) sc_tell(fd);
     break;
     
   case SYS_CLOSE:
-    fd = (int)(f->esp) + 1;
+    fd = *(((int*)f->esp) + 1);
     sc_close(fd);
     break; 
   }
