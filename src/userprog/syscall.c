@@ -73,7 +73,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     break;
 
   case SYS_EXEC:
-    cmd_line = *(((char*)f->esp) + 1); // first argv
+    cmd_line = *(((char**)f->esp) + 1); // first argv
     f->eax = (uint32_t) sc_exec(cmd_line);
     break;
 
@@ -83,18 +83,18 @@ syscall_handler (struct intr_frame *f UNUSED)
     break;
 
   case SYS_CREATE:
-    file = *(((char*)f->esp) + 1);
+    file = *(((char**)f->esp) + 1);
     initial_size = *(((int*)f->esp) + 2);
     f->eax = (uint32_t) sc_create(file, initial_size);
     break;
     
   case SYS_REMOVE:
-    file = *(((char*)f->esp) + 1);
+    file = *(((char**)f->esp) + 1);
     f->eax = (uint32_t) sc_remove(file);
     break;
 
   case SYS_OPEN:
-    file = *(((char*)f->esp) + 1);
+    file = *(((char**)f->esp) + 1);
     f->eax = (uint32_t) sc_open(file);
     break;
 
@@ -105,21 +105,21 @@ syscall_handler (struct intr_frame *f UNUSED)
     
   case SYS_READ:
     fd = *(((int*)f->esp) + 1);
-    buffer = *(((int*)f->esp) + 2);
-    size = *(((int*)f->esp) + 3);
+    buffer = *(((int**)f->esp) + 2);
+    size = *(((unsigned*)f->esp) + 3);
     f->eax = (uint32_t) sc_read(fd, buffer, size);
     break; 
 
   case SYS_WRITE:
     fd = *(((int*)f->esp) + 1);
-    buffer = *(((int*)f->esp) + 2);
+    buffer = *(((int**)f->esp) + 2);
     size = *(((int*)f->esp) + 3);
     f->eax = (uint32_t) sc_write(fd, buffer, size);
     break;
 
   case SYS_SEEK:
     fd = *(((int*)f->esp) + 1);
-    position = *(((int*)f->esp) + 2);
+    position = *(((unsigned*)f->esp) + 2);
     sc_seek(fd, position);
     break;
 
