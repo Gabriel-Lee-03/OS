@@ -556,23 +556,7 @@ static bool
 setup_stack (void **esp, char* file_name) 
 {
   uint8_t *kpage;
-  bool success = false;
-
-  // Task 2
-  // splits the old file name into its actual name and args
-  
-  char* token;
-  char* save_ptr;
-  char* argv[100];
-
-  int argc = 0;
-  for (token = strtok_r(file_name, " ", &save_ptr);
-      token != NULL; token = strtok_r(NULL, " ", &save_ptr)) {
-    argv[argc] = token;
-    argc++;
-  }
-
-  printf("argv[0]: %s\n", argv[0]);
+  bool success = false; 
 
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
@@ -581,25 +565,32 @@ setup_stack (void **esp, char* file_name)
       if (success) {
         *esp = PHYS_BASE;
 
-        uint8_t total_size = 0;
-        uint32_t *arg_address[argc];
         
-        /* loops through the args in reverse order and adds them to the stack */
-        for (int i = argc - 1; i >= 0; i--) {       
-          int len_arg = (strlen(&argv[i]) + 1) * sizeof(char);
-          total_size += (uint8_t) len_arg;
-          *esp -= len_arg;
-          memcpy(*esp, &argv[i], len_arg);
-          arg_address[i] = (uint32_t *) *esp;
+      // Task 2
+      // splits the old file name into its actual name and args
+        char* token;
+        char* save_ptr;
+        int argc = 0;
+        int total_size = 0;
+        char* arg_address[100];
 
-        }
+        for (token = strtok_r (file_name, " ", &save_ptr); 
+          token != NULL; token = strtok_r (NULL, " ", &save_ptr))
+          {
+            int len_arg = (strlen(token) + 1) * sizeof(char);
+            total_size += (uint8_t) len_arg;
+            *esp -= len_arg;
+            memcpy(*esp, token, len_arg);
+            arg_address[argc] = (uint32_t) *esp;
+            argc++;
+          }
 
-        /* adds the buffer bytes */
+         /* adds the word-align bytes */
         while (total_size % 4 != 0) {
           *esp -= sizeof(char);
-          uint8_t word_align = 0;
+          char word_align = 0;
           memcpy(*esp, &word_align, sizeof(char));
-          total_size += (uint8_t) sizeof(char);
+          total_size += sizeof(char);
         }
 
         /* adds a 0 byte for arg 4 */
@@ -627,13 +618,12 @@ setup_stack (void **esp, char* file_name)
         void *zero_void = 0;
         memcpy(*esp, &zero_void, sizeof(int));
         
-        hex_dump(esp, esp, PHYS_BASE - *esp, 0);
+        hex_dump(*esp, *esp, PHYS_BASE - *esp, 0);
       }
       else
         palloc_free_page (kpage);
       }
 
-  free(argv);
   return success;
 }
 
