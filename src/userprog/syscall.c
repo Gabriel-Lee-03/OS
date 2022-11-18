@@ -38,7 +38,6 @@ struct file_with_fd {
   struct list_elem elem;
 };
 
-
 void
 syscall_init (void) 
 {
@@ -46,19 +45,11 @@ syscall_init (void)
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
+/* gets the system call value and calls the corresponding function*/
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  /*
-  if (!is_user_vaddr(f->esp)) {
-    //page_fault(&f);
-    return;
-  }
-  if (!pagedir_get_page(thread_current()->pagedir, f->esp)) {
-    //page_fault(&f);
-    return;
-  }
-  */
+  /* gets the value of the system call*/
   int syscall_num = *((int*)f->esp);
 
   int status;
@@ -147,24 +138,29 @@ syscall_handler (struct intr_frame *f UNUSED)
 }
 
 // Task 2
+/* terminates pintos */
 static void sc_halt(void) {
   shutdown_power_off();
 }
 
+/* terminates the current user program */
 static void sc_exit(int status) {
+  /* saving its exit status to the current thread */
   thread_current()->exit_status = status;
   thread_exit();
 }
 
-//to do
+/* runs process_execute on the program with the corresponding file name */
 static pid_t sc_exec(const char *cmd_line) {
   return process_execute(cmd_line);
 }
 
+/* waits on the child process with the corresponding pid */
 static int sc_wait (pid_t pid) {
   return process_wait(pid);
 }
 
+/* adds a new file with the specified name and size to the file system */
 static bool sc_create (const char *file, unsigned initial_size) {
   lock_acquire(&file_lock);
   bool created = filesys_create(file, initial_size);
@@ -172,6 +168,7 @@ static bool sc_create (const char *file, unsigned initial_size) {
   return created;
 }
 
+/* removes a file from the file system and returns if it was sucsessful */
 static bool sc_remove (const char *file) {
   lock_acquire(&file_lock);
   bool removed = filesys_remove(file);
@@ -179,6 +176,7 @@ static bool sc_remove (const char *file) {
   return removed;
 }
 
+/* opens the file with the corresponding name, returns -1 if the file doesnt exist or the fd otherwise */
 static int sc_open (const char *file) {
   lock_acquire(&file_lock);
   struct file_with_fd* new_file_with_fd;
@@ -196,7 +194,7 @@ static int sc_open (const char *file) {
   return new_file_with_fd->fd;
 }
 
-//to do
+/* returns the byte size of the file */
 static int sc_filesize (int fd) {
   struct file *file = get_file(fd);
   lock_acquire(&file_lock);
@@ -205,7 +203,7 @@ static int sc_filesize (int fd) {
   return size;
 }
 
-//to do
+/* reads bytes from the open file to a buffer. returns -1 if it couldnt be read, otherwise returns the number of bytes read */
 static int sc_read (int fd, void *buffer, unsigned size) {
   if (fd == 0){
     uint8_t *temp_buff = (uint8_t *) buffer;
@@ -225,6 +223,7 @@ static int sc_read (int fd, void *buffer, unsigned size) {
   return -1;
 }
 
+/* writes from the buffer to the open file. it returns the number of bytes written */
 static int sc_write (int fd, const void *buffer, unsigned size) {
   lock_acquire(&file_lock);
   /* Write to console */
@@ -250,7 +249,7 @@ static int sc_write (int fd, const void *buffer, unsigned size) {
   }
 }
 
-//to do
+/* changes the next byte in open file to the given position */
 static void sc_seek (int fd, unsigned position) {
   if (fd < 1) {
     return;
@@ -267,7 +266,7 @@ static void sc_seek (int fd, unsigned position) {
   
 }
 
-//to do
+/* returns the next byte's position in the open file */
 static unsigned sc_tell (int fd) {
 
   struct file *file = get_file(fd);
@@ -278,7 +277,7 @@ static unsigned sc_tell (int fd) {
   return pos;
 }
 
-//to do
+/* closes the given file */
 static void sc_close (int fd) {
   lock_acquire(&file_lock);
 
@@ -307,6 +306,7 @@ static void sc_close (int fd) {
     return;
 }
 
+/* gets the given file */
 static struct file* get_file(int fd) {
   struct list_elem* curr_elem = list_front(&thread_current()->file_list);
   for (int i = 2; i < fd; i++) {
