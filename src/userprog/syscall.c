@@ -77,7 +77,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     break;
 
   case SYS_EXIT:
-    status = *((int*)f->esp) + 1;
+    status = *(((int*)f->esp) + 1);
     sc_exit(status);
     break;
 
@@ -142,8 +142,6 @@ syscall_handler (struct intr_frame *f UNUSED)
     sc_close(fd);
     break; 
   }
-
-  thread_exit ();
 }
 
 // Task 2
