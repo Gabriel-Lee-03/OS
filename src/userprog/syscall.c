@@ -160,6 +160,9 @@ static int sc_wait (pid_t pid) {
 
 /* adds a new file with the specified name and size to the file system */
 static bool sc_create (const char *file, unsigned initial_size) {
+  if (file == NULL) {
+    sc_exit(-1);
+  }
   lock_acquire(&file_lock);
   bool created = filesys_create(file, initial_size);
   lock_release(&file_lock);
