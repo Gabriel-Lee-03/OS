@@ -291,10 +291,10 @@ static void sc_close (int fd) {
   for (temp_elem = list_front(&thread_current()->file_list);
     temp_elem != list_tail(&thread_current()->file_list);
     temp_elem = list_next(&temp_elem)) {
-      struct file_with_fd *f = list_entry (temp, struct file_with_fd, elem);
+      struct file_with_fd *f = list_entry (temp_elem, struct file_with_fd, elem);
       if (f->fd == fd){
         file_close(f->file_ptr);
-        list_remove(f->elem);
+        list_remove(&f->elem);
         lock_release(&file_lock);
         return;
       }
