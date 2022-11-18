@@ -19,7 +19,9 @@
         "process.h": "c",
         "synch.h": "c",
         "shutdown.h": "c",
-        "init.h": "c"
+        "init.h": "c",
+        "gdt.h": "c",
+        "input.h": "c"
     },
     "C_Cpp.errorSquiggles": "Enabled"
 }

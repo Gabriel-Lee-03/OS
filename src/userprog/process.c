@@ -8,6 +8,7 @@
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
+#include "userprog/syscall.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -324,11 +325,11 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (t->pagedir == NULL) 
     goto done;
   process_activate ();
-
   // Task 2
   // splits the old file name into its actual name and args
+  
   char* token;
-  char *save_ptr;
+  char* save_ptr;
   char* argv[100];
   int argc = 0;
   for (token = strtok_r(file_name, " ", &save_ptr);
@@ -336,6 +337,9 @@ load (const char *file_name, void (**eip) (void), void **esp)
     argv[argc] = token;
     argc++;
   }
+
+  //struct file *f = filesys_open("args-none");
+  lock_acquire(&file_lock);
 
   /* Open executable file. */
   file = filesys_open (argv[0]);
@@ -429,6 +433,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
  done:
   /* We arrive here whether the load is successful or not. */
   file_close (file);
+  lock_release(&file_lock);
   return success;
 }
 

@@ -5,6 +5,7 @@
 #include "threads/thread.h"
 #include "userprog/process.h"
 #include "threads/vaddr.h"
+#include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 #include "threads/synch.h"
@@ -37,7 +38,6 @@ struct file_with_fd {
   struct list_elem elem;
 };
 
-struct lock file_lock;   /* Lock for sychronizing file actions */
 
 void
 syscall_init (void) 
