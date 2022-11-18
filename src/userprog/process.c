@@ -623,7 +623,7 @@ setup_stack (void **esp, char* file_name)
         void *zero_void = 0;
         memcpy(*esp, &zero_void, sizeof(int));
         
-        hex_dump(*esp, *esp, PHYS_BASE - *esp, 0);
+        //hex_dump(*esp, *esp, PHYS_BASE - *esp, 0);
       }
       else
         palloc_free_page (kpage);
