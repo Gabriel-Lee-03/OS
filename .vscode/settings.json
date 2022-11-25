@@ -22,7 +22,9 @@
         "init.h": "c",
         "gdt.h": "c",
         "input.h": "c",
-        "debug.h": "c"
+        "debug.h": "c",
+        "*.tcc": "cpp",
+        "sstream": "cpp"
     },
     "C_Cpp.errorSquiggles": "Enabled"
 }
