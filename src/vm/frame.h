@@ -4,7 +4,7 @@
 #include <inttypes.h>
 
 struct frame_table_entry {
-    uint32_t* frame;
+    void* frame_ptr;
     struct page *page;
 };
 

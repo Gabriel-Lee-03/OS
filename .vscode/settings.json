@@ -24,7 +24,8 @@
         "input.h": "c",
         "debug.h": "c",
         "*.tcc": "cpp",
-        "sstream": "cpp"
+        "sstream": "cpp",
+        "inttypes.h": "c"
     },
     "C_Cpp.errorSquiggles": "Enabled"
 }
