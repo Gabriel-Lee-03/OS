@@ -8,4 +8,7 @@ struct frame_table_entry {
     struct page *page;
 };
 
+void frame_init(void);
+struct frame_table_entry* frame_alloc(struct page*)
+
 #endif /* vm/frame.h */

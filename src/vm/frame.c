@@ -7,7 +7,7 @@
 static struct frame_table_entry* entries;
 static int frame_size;
 
-void frame_init() {
+void frame_init(void) {
     void* frame_ptr;
     struct frame_table_entry* entry;
     entries = malloc(sizeof(*entries) * MAX_FRAME_SIZE);
@@ -23,7 +23,7 @@ void frame_init() {
     }
 }
 
-struct frame_table_entry* frame_alloc(struct page *page) {
+struct frame_table_entry* frame_alloc(struct page* page) {
     struct frame_table_entry* entry;
     for (int i = 0; i < frame_size; i++) {
         entry = &entries[i];
