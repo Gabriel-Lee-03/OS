@@ -25,7 +25,12 @@
         "debug.h": "c",
         "*.tcc": "cpp",
         "sstream": "cpp",
-        "inttypes.h": "c"
+        "inttypes.h": "c",
+        "array": "c",
+        "string_view": "c",
+        "initializer_list": "c",
+        "ranges": "c",
+        "utility": "c"
     },
     "C_Cpp.errorSquiggles": "Enabled"
 }
