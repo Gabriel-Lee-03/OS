@@ -3,6 +3,7 @@
 
 #include <debug.h>
 #include <list.h>
+#include <hash.h>
 #include <stdint.h>
 #include "threads/synch.h"
 
@@ -104,6 +105,9 @@ struct thread
     struct thread *parent;
     struct list_elem child_elem;
     struct child_info *info;
+
+    // Task 3
+    struct hash supp_page_table;    /* Supplementry page table */
 
     struct list_elem allelem;       /* List element for all threads list. */
 
