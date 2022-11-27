@@ -31,7 +31,8 @@
         "initializer_list": "c",
         "ranges": "c",
         "utility": "c",
-        "palloc.h": "c"
+        "palloc.h": "c",
+        "page.h": "c"
     },
     "C_Cpp.errorSquiggles": "Enabled"
 }
