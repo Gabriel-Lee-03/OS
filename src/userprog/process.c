@@ -148,7 +148,7 @@ process_wait (tid_t child_tid UNUSED)
     }
   }
 
-  /* if the given child isn't one of the current thread, return -1 */
+  /* if the given child isn't one of the child of current thread, return -1 */
   if (child_thread == NULL) {
     return -1;
   }

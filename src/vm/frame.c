@@ -33,6 +33,7 @@ struct frame_table_entry* frame_alloc(struct page* page) {
             return entry;
         }
     }
+    /* Run out of frames */
     return NULL;
 }
 
