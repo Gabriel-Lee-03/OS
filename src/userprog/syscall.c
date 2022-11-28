@@ -332,6 +332,13 @@ static void sc_close (int fd) {
   
   lock_acquire(&file_lock);
   file_close(file_to_close);
+
+  /* Change file to null in struct file_with_fd */
+  struct list_elem* curr_elem = list_front(&thread_current()->file_list);
+  for (int i = 2; i < fd; i++) {
+    curr_elem = curr_elem->next;
+  }
+  list_entry(curr_elem, struct file_with_fd, elem)->file_ptr = NULL;
   lock_release(&file_lock);
 
   /*
