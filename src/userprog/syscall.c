@@ -79,6 +79,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   case SYS_EXEC:
     check_mem_access(f->esp + 1);
     cmd_line = *(((char**)f->esp) + 1); // first argv
+    check_mem_access(cmd_line);
     f->eax = (uint32_t) sc_exec(cmd_line);
     break;
 
@@ -92,6 +93,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     check_mem_access(f->esp + 1);
     check_mem_access(f->esp + 2);
     file = *(((char**)f->esp) + 1);
+    check_mem_access(file);
     initial_size = *(((int*)f->esp) + 2);
     f->eax = (uint32_t) sc_create(file, initial_size);
     break;
@@ -105,6 +107,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   case SYS_OPEN:
     check_mem_access(f->esp + 1);
     file = *(((char**)f->esp) + 1);
+    check_mem_access(file);
     f->eax = (uint32_t) sc_open(file);
     break;
 
@@ -121,6 +124,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     fd = *(((int*)f->esp) + 1);
     buffer = *(((int**)f->esp) + 2);
     size = *(((unsigned*)f->esp) + 3);
+    check_mem_access(buffer);
     f->eax = (uint32_t) sc_read(fd, buffer, size);
     break; 
 
@@ -131,6 +135,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     fd = *(((int*)f->esp) + 1);
     buffer = *(((int**)f->esp) + 2);
     size = *(((int*)f->esp) + 3);
+    check_mem_access(buffer);
     f->eax = (uint32_t) sc_write(fd, buffer, size);
     break;
 
