@@ -172,7 +172,7 @@ static void sc_exit(int status) {
 /* runs process_execute on the program with the corresponding file name */
 static pid_t sc_exec(const char *cmd_line) {
   lock_acquire(&file_lock);
-  char* file_name = malloc (strlen(cmd_line) + 1);
+  char* file_name = malloc(strlen(cmd_line) + 1);
   char* save_ptr;
 	strlcpy(file_name, cmd_line, strlen(cmd_line) + 1);
 	file_name = strtok_r(file_name, " ", &save_ptr);
@@ -232,6 +232,9 @@ static int sc_open (const char *file) {
 /* returns the byte size of the file */
 static int sc_filesize (int fd) {
   struct file *file = get_file(fd);
+  if (file == NULL) {
+    sc_exit(-1);
+  }
   lock_acquire(&file_lock);
   int size = file_length(file);
   lock_release(&file_lock);
@@ -250,7 +253,11 @@ static int sc_read (int fd, void *buffer, unsigned size) {
   
   if (fd > 0) {
     lock_acquire(&file_lock);
-    off_t size_read = file_read(fd, buffer, size);
+    struct file* file_to_read = get_file(fd);
+    if (file_to_read == NULL) {
+      sc_exit(-1);
+    }
+    off_t size_read = file_read(file_to_read, buffer, size);
     lock_release(&file_lock);
     return size_read;
   }
@@ -278,6 +285,9 @@ static int sc_write (int fd, const void *buffer, unsigned size) {
   /* Write to file */
   else {
     struct file* file_to_write = get_file(fd);
+    if (file_to_write == NULL) {
+      sc_exit(-1);
+    }
     int write = file_write(file_to_write, buffer, size);
     lock_release(&file_lock);
     return write;
@@ -286,13 +296,9 @@ static int sc_write (int fd, const void *buffer, unsigned size) {
 
 /* changes the next byte in open file to the given position */
 static void sc_seek (int fd, unsigned position) {
-  if (fd < 1) {
-    return;
-  }
-
   struct file *file = get_file(fd);
-  if(!file) {
-    return;
+  if (file == NULL) {
+    sc_exit(-1);
   }
   
   lock_acquire(&file_lock);
@@ -303,8 +309,10 @@ static void sc_seek (int fd, unsigned position) {
 
 /* returns the next byte's position in the open file */
 static unsigned sc_tell (int fd) {
-
   struct file *file = get_file(fd);
+  if (file == NULL) {
+    sc_exit(-1);
+  }
   
   lock_acquire(&file_lock);
   off_t pos = file_tell(file);
@@ -314,15 +322,25 @@ static unsigned sc_tell (int fd) {
 
 /* closes the given file */
 static void sc_close (int fd) {
+  struct file *file_to_close = get_file(fd);
+  if (file_to_close == NULL) {
+    sc_exit(-1);
+  }
+  
   lock_acquire(&file_lock);
+  file_close(file_to_close);
+  lock_release(&file_lock);
+  
+  /*
+    lock_acquire(&file_lock);
 
-  /* if the list is empty, return straight away*/
+  // if the list is empty, return straight away
   if (list_empty(&thread_current()->file_list)) {
     lock_release(&file_lock);
     return;
   }
 
-  /* loop through the threads file list, if the fd matches, close the file and remove it from the list the return */
+  // loop through the threads file list, if the fd matches, close the file and remove it from the list the return
   struct list_elem *temp_elem;
   for (temp_elem = list_front(&thread_current()->file_list);
     temp_elem != list_tail(&thread_current()->file_list);
@@ -336,16 +354,23 @@ static void sc_close (int fd) {
       }
     }
 
-    /* if the file wasn't found, release the lock then return */
+    // if the file wasn't found, release the lock then return
     lock_release(&file_lock);
     return;
+  */
 }
 
 /* gets the given file */
 static struct file* get_file(int fd) {
+  if (fd < 2 || list_empty(&thread_current()->file_list)) {
+    return NULL;
+  }
   struct list_elem* curr_elem = list_front(&thread_current()->file_list);
   for (int i = 2; i < fd; i++) {
     curr_elem = curr_elem->next;
+    if (curr_elem == list_tail(&thread_current()->file_list)) {
+      return NULL;
+    }
   }
   return list_entry(curr_elem, struct file_with_fd, elem)->file_ptr;
 }
