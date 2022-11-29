@@ -17,7 +17,7 @@
 // Task 2
 static void syscall_handler (struct intr_frame *);
 static void sc_halt(void);
-static void sc_exit(int);
+void sc_exit(int);
 static pid_t sc_exec(const char *);
 static int sc_wait (pid_t);
 static bool sc_create (const char *, unsigned );
@@ -168,7 +168,7 @@ static void sc_halt(void) {
 }
 
 /* terminates the current user program */
-static void sc_exit(int status) {
+void sc_exit(int status) {
   /* saving its exit status to the current thread */
   thread_current()->exit_status = status;
   thread_exit();
