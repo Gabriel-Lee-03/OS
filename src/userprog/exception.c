@@ -147,7 +147,12 @@ page_fault (struct intr_frame *f)
 
   
    /* task 3 */
-   //if its a user page and not_present, try to page in, if it cant, call thread exit
+   if (not_present && user) {
+      if (!add_from_page_fault (fault_addr)) {
+         thread_exit();
+      }
+      return;
+   }
 
   printf ("Page fault at %p: %s error %s page in %s context.\n",
           fault_addr,
