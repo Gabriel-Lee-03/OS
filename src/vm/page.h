@@ -15,6 +15,10 @@ struct supp_page_table_entry {
     bool kernel_vm;     /* Lies within kernel virtual memory */
     bool read_only;     /* Read-only page */
 
+    struct file *f;
+    off_t f_offset;
+    off_t f_size;
+
     struct hash_elem h_elem;
 };
 
