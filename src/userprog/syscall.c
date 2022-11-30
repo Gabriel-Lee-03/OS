@@ -13,11 +13,12 @@
 #include "devices/shutdown.h"
 #include "devices/input.h"
 #include <stdlib.h>
+#include <console.h>
 
 // Task 2
 static void syscall_handler (struct intr_frame *);
 static void sc_halt(void);
-static void sc_exit(int);
+void sc_exit(int);
 static pid_t sc_exec(const char *);
 static int sc_wait (pid_t);
 static bool sc_create (const char *, unsigned );
@@ -32,14 +33,6 @@ static void sc_close (int);
 static struct file* get_file(int);
 static void* check_mem_access(const void *);
 
-// Task 2
-/* Struct for storing and converting file to fd */
-struct file_with_fd {
-  struct file* file_ptr;
-  int fd;
-  struct list_elem elem;
-};
-
 void
 syscall_init (void) 
 {
@@ -52,8 +45,8 @@ static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
   /* gets the value of the system call*/
-  int syscall_num = *((int*)f->esp);
   check_mem_access(f->esp);
+  int syscall_num = *((int*)f->esp);
 
   int status;
   char *file;
@@ -73,12 +66,16 @@ syscall_handler (struct intr_frame *f UNUSED)
   case SYS_EXIT:
     check_mem_access(f->esp + 1);
     status = *(((int*)f->esp) + 1);
+    if (status < -1) {
+      status = -1;
+    }
     sc_exit(status);
     break;
 
   case SYS_EXEC:
     check_mem_access(f->esp + 1);
     cmd_line = *(((char**)f->esp) + 1); // first argv
+    check_mem_access(cmd_line);
     f->eax = (uint32_t) sc_exec(cmd_line);
     break;
 
@@ -92,6 +89,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     check_mem_access(f->esp + 1);
     check_mem_access(f->esp + 2);
     file = *(((char**)f->esp) + 1);
+    check_mem_access(file);
     initial_size = *(((int*)f->esp) + 2);
     f->eax = (uint32_t) sc_create(file, initial_size);
     break;
@@ -105,6 +103,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   case SYS_OPEN:
     check_mem_access(f->esp + 1);
     file = *(((char**)f->esp) + 1);
+    check_mem_access(file);
     f->eax = (uint32_t) sc_open(file);
     break;
 
@@ -121,6 +120,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     fd = *(((int*)f->esp) + 1);
     buffer = *(((int**)f->esp) + 2);
     size = *(((unsigned*)f->esp) + 3);
+    check_mem_access(buffer);
     f->eax = (uint32_t) sc_read(fd, buffer, size);
     break; 
 
@@ -131,6 +131,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     fd = *(((int*)f->esp) + 1);
     buffer = *(((int**)f->esp) + 2);
     size = *(((int*)f->esp) + 3);
+    check_mem_access(buffer);
     f->eax = (uint32_t) sc_write(fd, buffer, size);
     break;
 
@@ -163,7 +164,7 @@ static void sc_halt(void) {
 }
 
 /* terminates the current user program */
-static void sc_exit(int status) {
+void sc_exit(int status) {
   /* saving its exit status to the current thread */
   thread_current()->exit_status = status;
   thread_exit();
@@ -172,7 +173,7 @@ static void sc_exit(int status) {
 /* runs process_execute on the program with the corresponding file name */
 static pid_t sc_exec(const char *cmd_line) {
   lock_acquire(&file_lock);
-  char* file_name = malloc (strlen(cmd_line) + 1);
+  char* file_name = malloc(strlen(cmd_line) + 1);
   char* save_ptr;
 	strlcpy(file_name, cmd_line, strlen(cmd_line) + 1);
 	file_name = strtok_r(file_name, " ", &save_ptr);
@@ -213,6 +214,9 @@ static bool sc_remove (const char *file) {
 
 /* opens the file with the corresponding name, returns -1 if the file doesnt exist or the fd otherwise */
 static int sc_open (const char *file) {
+  if (file == NULL) {
+    return -1;
+  }
   struct file_with_fd* new_file_with_fd = malloc(sizeof(struct file_with_fd));
   lock_acquire(&file_lock);
   struct file* new_file = filesys_open(file);
@@ -223,7 +227,7 @@ static int sc_open (const char *file) {
 
   /* Generate new fd for the file and store the conversion 
      in file_list of current thread */
-  new_file_with_fd->file_ptr = &new_file;
+  new_file_with_fd->file_ptr = new_file;
   new_file_with_fd->fd = list_size(&thread_current()->file_list)+2; 
   list_push_back(&thread_current()->file_list, &new_file_with_fd->elem);
   return new_file_with_fd->fd;
@@ -232,6 +236,9 @@ static int sc_open (const char *file) {
 /* returns the byte size of the file */
 static int sc_filesize (int fd) {
   struct file *file = get_file(fd);
+  if (file == NULL) {
+    sc_exit(-1);
+  }
   lock_acquire(&file_lock);
   int size = file_length(file);
   lock_release(&file_lock);
@@ -249,8 +256,12 @@ static int sc_read (int fd, void *buffer, unsigned size) {
   }
   
   if (fd > 0) {
+    struct file* file_to_read = get_file(fd);
+    if (file_to_read == NULL) {
+      sc_exit(-1);
+    }
     lock_acquire(&file_lock);
-    off_t size_read = file_read(fd, buffer, size);
+    off_t size_read = file_read(file_to_read, buffer, size);
     lock_release(&file_lock);
     return size_read;
   }
@@ -260,39 +271,37 @@ static int sc_read (int fd, void *buffer, unsigned size) {
 
 /* writes from the buffer to the open file. it returns the number of bytes written */
 static int sc_write (int fd, const void *buffer, unsigned size) {
-  lock_acquire(&file_lock);
+  int written_bytes;
   /* Write to console */
   if (fd == 1) {
     /* Only write 500 characters if it contains more than 500 */
     if (size > 500) {
       putbuf((char *) buffer, 500);
-      lock_release(&file_lock);
-      return 500;
+      return size;
     }
     else {
       putbuf((char *) buffer, size);
-      lock_release(&file_lock);
       return size;
     }
   }
   /* Write to file */
   else {
     struct file* file_to_write = get_file(fd);
-    int write = file_write(file_to_write, buffer, size);
+    if (file_to_write == NULL) {
+      sc_exit(-1);
+    }
+    lock_acquire(&file_lock);
+    int written_bytes = file_write(file_to_write, buffer, size);
     lock_release(&file_lock);
-    return write;
+    return written_bytes;
   }
 }
 
 /* changes the next byte in open file to the given position */
 static void sc_seek (int fd, unsigned position) {
-  if (fd < 1) {
-    return;
-  }
-
   struct file *file = get_file(fd);
-  if(!file) {
-    return;
+  if (file == NULL) {
+    sc_exit(-1);
   }
   
   lock_acquire(&file_lock);
@@ -303,8 +312,10 @@ static void sc_seek (int fd, unsigned position) {
 
 /* returns the next byte's position in the open file */
 static unsigned sc_tell (int fd) {
-
   struct file *file = get_file(fd);
+  if (file == NULL) {
+    sc_exit(-1);
+  }
   
   lock_acquire(&file_lock);
   off_t pos = file_tell(file);
@@ -314,15 +325,32 @@ static unsigned sc_tell (int fd) {
 
 /* closes the given file */
 static void sc_close (int fd) {
+  struct file *file_to_close = get_file(fd);
+  if (file_to_close == NULL) {
+    sc_exit(-1);
+  }
+  
   lock_acquire(&file_lock);
+  file_close(file_to_close);
 
-  /* if the list is empty, return straight away*/
+  /* Change file to null in struct file_with_fd */
+  struct list_elem* curr_elem = list_front(&thread_current()->file_list);
+  for (int i = 2; i < fd; i++) {
+    curr_elem = curr_elem->next;
+  }
+  list_entry(curr_elem, struct file_with_fd, elem)->file_ptr = NULL;
+  lock_release(&file_lock);
+
+  /*
+    lock_acquire(&file_lock);
+
+  // if the list is empty, return straight away
   if (list_empty(&thread_current()->file_list)) {
     lock_release(&file_lock);
     return;
   }
 
-  /* loop through the threads file list, if the fd matches, close the file and remove it from the list the return */
+  // loop through the threads file list, if the fd matches, close the file and remove it from the list the return
   struct list_elem *temp_elem;
   for (temp_elem = list_front(&thread_current()->file_list);
     temp_elem != list_tail(&thread_current()->file_list);
@@ -336,16 +364,23 @@ static void sc_close (int fd) {
       }
     }
 
-    /* if the file wasn't found, release the lock then return */
+    // if the file wasn't found, release the lock then return
     lock_release(&file_lock);
     return;
+  */
 }
 
 /* gets the given file */
 static struct file* get_file(int fd) {
+  if (fd < 2 || list_empty(&thread_current()->file_list)) {
+    return NULL;
+  }
   struct list_elem* curr_elem = list_front(&thread_current()->file_list);
   for (int i = 2; i < fd; i++) {
     curr_elem = curr_elem->next;
+    if (curr_elem == list_tail(&thread_current()->file_list)) {
+      return NULL;
+    }
   }
   return list_entry(curr_elem, struct file_with_fd, elem)->file_ptr;
 }
