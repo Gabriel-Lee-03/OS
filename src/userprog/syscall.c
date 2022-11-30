@@ -13,6 +13,7 @@
 #include "devices/shutdown.h"
 #include "devices/input.h"
 #include <stdlib.h>
+#include <console.h>
 
 // Task 2
 static void syscall_handler (struct intr_frame *);
@@ -52,8 +53,8 @@ static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
   /* gets the value of the system call*/
-  int syscall_num = *((int*)f->esp);
   check_mem_access(f->esp);
+  int syscall_num = *((int*)f->esp);
 
   int status;
   char *file;
@@ -275,18 +276,16 @@ static int sc_read (int fd, void *buffer, unsigned size) {
 
 /* writes from the buffer to the open file. it returns the number of bytes written */
 static int sc_write (int fd, const void *buffer, unsigned size) {
-  lock_acquire(&file_lock);
+  int written_bytes;
   /* Write to console */
   if (fd == 1) {
     /* Only write 500 characters if it contains more than 500 */
     if (size > 500) {
       putbuf((char *) buffer, 500);
-      lock_release(&file_lock);
-      return 500;
+      return size;
     }
     else {
       putbuf((char *) buffer, size);
-      lock_release(&file_lock);
       return size;
     }
   }
@@ -296,9 +295,10 @@ static int sc_write (int fd, const void *buffer, unsigned size) {
     if (file_to_write == NULL) {
       sc_exit(-1);
     }
-    int write = file_write(file_to_write, buffer, size);
+    lock_acquire(&file_lock);
+    int written_bytes = file_write(file_to_write, buffer, size);
     lock_release(&file_lock);
-    return write;
+    return written_bytes;
   }
 }
 
