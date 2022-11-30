@@ -33,14 +33,6 @@ static void sc_close (int);
 static struct file* get_file(int);
 static void* check_mem_access(const void *);
 
-// Task 2
-/* Struct for storing and converting file to fd */
-struct file_with_fd {
-  struct file* file_ptr;
-  int fd;
-  struct list_elem elem;
-};
-
 void
 syscall_init (void) 
 {
@@ -264,11 +256,11 @@ static int sc_read (int fd, void *buffer, unsigned size) {
   }
   
   if (fd > 0) {
-    lock_acquire(&file_lock);
     struct file* file_to_read = get_file(fd);
     if (file_to_read == NULL) {
       sc_exit(-1);
     }
+    lock_acquire(&file_lock);
     off_t size_read = file_read(file_to_read, buffer, size);
     lock_release(&file_lock);
     return size_read;

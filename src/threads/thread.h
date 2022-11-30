@@ -98,6 +98,7 @@ struct thread
     int priority;                   /* Priority without donation */
 
     // Task 2
+    struct file* opened_file;
     struct list file_list;
     struct list child_list;
     struct list dead_child_list;    /* A list of child_info */

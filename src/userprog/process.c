@@ -177,6 +177,24 @@ process_exit (void)
   enum intr_level old_level;
   old_level = intr_disable ();
   struct thread *cur = thread_current ();
+
+
+  if (!list_empty(&cur->file_list)) {
+    struct list_elem* curr_elem = list_front(&cur->file_list);
+    while (curr_elem != list_tail(&cur->file_list)) {
+      struct file_with_fd* f = list_entry(curr_elem, struct file_with_fd, elem);
+      if (f->file_ptr != NULL){
+        lock_acquire(&file_lock);
+        file_close(f->file_ptr);
+        lock_release(&file_lock);
+      }
+      curr_elem = list_next(curr_elem);
+    }
+  }
+  lock_acquire(&file_lock);
+  file_close(cur->opened_file);
+  lock_release(&file_lock);
+
   uint32_t *pd;
 
   /* Destroy the current process's page directory and switch back
@@ -340,6 +358,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* Open executable file. */
   file = filesys_open (token);
+  thread_current()->opened_file = file;
+  lock_release(&file_lock);
   free(fn_copy);
 
   if (file == NULL) 
@@ -348,6 +368,9 @@ load (const char *file_name, void (**eip) (void), void **esp)
       goto done; 
     }
 
+  file_deny_write(file);
+
+  lock_acquire(&file_lock);
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
       || memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
@@ -360,6 +383,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
       printf ("load: %s: error loading executable\n", file_name);
       goto done; 
     }
+  lock_release(&file_lock);
 
   /* Read program headers. */
   file_ofs = ehdr.e_phoff;
@@ -369,10 +393,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
       if (file_ofs < 0 || file_ofs > file_length (file))
         goto done;
+      lock_acquire(&file_lock);
       file_seek (file, file_ofs);
 
       if (file_read (file, &phdr, sizeof phdr) != sizeof phdr)
         goto done;
+      lock_release(&file_lock);
       file_ofs += sizeof phdr;
       switch (phdr.p_type) 
         {
@@ -431,8 +457,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
-  lock_release(&file_lock);
   return success;
 }
 
@@ -507,7 +531,9 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
 
+  lock_acquire(&file_lock);
   file_seek (file, ofs);
+  lock_release(&file_lock);
   while (read_bytes > 0 || zero_bytes > 0) 
     {
       /* Calculate how to fill this page.
@@ -545,9 +571,11 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       }
 
       /* Load data into the page. */
+      lock_acquire(&file_lock);
       if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
         return false; 
       }
+      lock_release(&file_lock);
       memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
       /* Advance. */
