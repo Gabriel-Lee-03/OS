@@ -6,6 +6,7 @@
 #include <hash.h>
 #include <stdint.h>
 #include "threads/synch.h"
+#include "userprog/syscall.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -109,6 +110,7 @@ struct thread
 
     // Task 3
     struct hash supp_page_table;    /* Supplementry page table */
+    struct list mmapping_list;      /* List of mmapping */
 
     struct list_elem allelem;       /* List element for all threads list. */
 
@@ -123,6 +125,9 @@ struct thread
 
     // Task 2
     int exit_status;
+
+    // Task 3
+    mapid_t next_mapid;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

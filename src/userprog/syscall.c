@@ -17,7 +17,6 @@
 #include "devices/shutdown.h"
 #include "devices/input.h"
 
-
 // Task 2
 static void syscall_handler (struct intr_frame *);
 static void sc_halt(void);
@@ -37,6 +36,12 @@ static mapid_t sc_mmap(int, void*);
 static void sc_munmap(mapid_t);
 static struct file* get_file(int);
 static void* check_mem_access(const void *);
+
+static struct mmapping {
+    int fd;
+    uint8_t* addr;
+    struct list_elem elem;
+};
 
 void
 syscall_init (void) 
@@ -366,12 +371,40 @@ static void sc_close (int fd) {
   lock_release(&file_lock);
 }
 
-  static mapid_t sc_mmap(int fd, void* addr) {
-    return 0;
+static mapid_t sc_mmap(int fd, void* addr) {
+  struct file *file_to_map = get_file(fd);
+  if (file_to_map == NULL || addr == 0 || pg_ofs(addr) != 0) {
+    return -1;
   }
 
-  static void sc_munmap(mapid_t mapping) {
+  struct mmapping *map = malloc(sizeof(struct mmapping));
+  lock_acquire(&file_lock);
+  off_t length = file_length(&file_to_map);
+  lock_release(&file_lock);
+
+  if (length == 0) {
+    return -1;
   }
+
+  struct file_with_fd* new_file_with_fd = malloc(sizeof(struct file_with_fd));
+  int new_file = file_reopen(file_to_map);
+  /* Generate new fd for the file and store the conversion 
+     in file_list of current thread */
+  new_file_with_fd->file_ptr = new_file;
+  new_file_with_fd->fd = list_size(&thread_current()->file_list) + 2; 
+  list_push_back(&thread_current()->file_list, &new_file_with_fd->elem);
+
+  // Page allocation
+
+  map->mapid = thread_current()->next_mapid;
+  thread_current()->next_mapid++;
+  map->fd = new_file_with_fd->fd;
+  map->addr = addr;
+  list_push_back(&thread_current()->mmapping_list, &map->elem);
+}
+
+static void sc_munmap(mapid_t mapping) {
+}
 
 /* gets the given file */
 static struct file* get_file(int fd) {
