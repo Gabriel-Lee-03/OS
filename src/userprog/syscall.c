@@ -40,7 +40,8 @@ static void* check_mem_access(const void *);
 static struct mmapping {
     mapid_t mapid;
     int fd;
-    uint8_t* addr;
+    uint8_t* begin_addr;
+    uint8_t* end_addr;
     struct list_elem elem;
 };
 
@@ -195,6 +196,11 @@ static void sc_halt(void) {
 
 /* terminates the current user program */
 void sc_exit(int status) {
+  while (!list_empty(&thread_current()->mmapping_list)) {
+    struct list_elem curr_elem = list_front(&thread_current()->mmapping_list);
+    sc_munmap(list_entry(curr_elem, struct mmapping, elem)->mapid);
+  }
+
   /* saving its exit status to the current thread */
   thread_current()->exit_status = status;
   thread_exit();
@@ -396,11 +402,27 @@ static mapid_t sc_mmap(int fd, void* addr) {
   list_push_back(&thread_current()->file_list, &new_file_with_fd->elem);
 
   // TBD: Page allocation
+  /*
+  off_t offset = 0
+  while (length > 0) {
+    struct page* p = // allocate ...
+    p->file = new_file;
+    p->offset = offset;
+    if (length > PGSIZE) {
+      offset += PGSIZE;
+      length -= PGSIZE;
+    }
+    else {
+      length -= PGSIZE;
+    }
+  }
+  */
 
   map->mapid = thread_current()->next_mapid;
   thread_current()->next_mapid++;
   map->fd = new_file_with_fd->fd;
-  map->addr = addr;
+  map->begin_addr = addr;
+  // map->end_addr = addr + offset;
   list_push_back(&thread_current()->mmapping_list, &map->elem);
 }
 
@@ -410,7 +432,14 @@ static void sc_munmap(mapid_t mapping) {
     list_remove(&map->elem);
 
     // TBD: Page deallocation
-
+    /*
+    void* curr_addr = map->start_addr;
+    int offset = 0
+    while (curr_addr < end->start_addr) {
+      // deallocate page ...
+        curr_addr += PGSIZE;
+    }
+    */
     free(map);
   }
 }
