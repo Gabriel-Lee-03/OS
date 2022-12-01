@@ -2,7 +2,9 @@
 #define VM_PAGE_H
 
 #include <stdbool.h>
+#include <inttypes.h>
 #include <hash.h>
+#include "filesys/off_t.h"
 
 struct page {
     struct thread* owner;
