@@ -34,6 +34,7 @@ static unsigned sc_tell (int);
 static void sc_close (int);
 static mapid_t sc_mmap(int, void*);
 static void sc_munmap(mapid_t);
+static struct mmapping* get_mmapping(mapid_t);
 static struct file* get_file(int);
 static void* check_mem_access(const void *);
 
@@ -197,7 +198,7 @@ static void sc_halt(void) {
 /* terminates the current user program */
 void sc_exit(int status) {
   while (!list_empty(&thread_current()->mmapping_list)) {
-    struct list_elem curr_elem = list_front(&thread_current()->mmapping_list);
+    struct list_elem* curr_elem = list_front(&thread_current()->mmapping_list);
     sc_munmap(list_entry(curr_elem, struct mmapping, elem)->mapid);
   }
 

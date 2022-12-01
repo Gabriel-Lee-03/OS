@@ -32,7 +32,9 @@
         "ranges": "c",
         "utility": "c",
         "palloc.h": "c",
-        "page.h": "c"
+        "page.h": "c",
+        "pagedir.h": "c",
+        "directory.h": "c"
     },
     "C_Cpp.errorSquiggles": "Enabled"
 }

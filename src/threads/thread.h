@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include "threads/synch.h"
 #include "userprog/syscall.h"
+#include "userprog/process.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -21,6 +22,9 @@ enum thread_status
    You can redefine this to whatever type you like. */
 typedef int tid_t;
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
+
+// Task 3
+typedef int mapid_t;
 
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
