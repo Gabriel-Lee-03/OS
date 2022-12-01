@@ -497,7 +497,7 @@ init_thread (struct thread *t, const char *name, int priority)
 
   // Task 3
   list_init(&t->mmapping_list);
-  t->next_mapid = 0;
+  t->next_mapid = 1;
   t->parent = NULL;
 
   old_level = intr_disable ();

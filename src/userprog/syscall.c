@@ -38,6 +38,7 @@ static struct file* get_file(int);
 static void* check_mem_access(const void *);
 
 static struct mmapping {
+    mapid_t mapid;
     int fd;
     uint8_t* addr;
     struct list_elem elem;
@@ -394,7 +395,7 @@ static mapid_t sc_mmap(int fd, void* addr) {
   new_file_with_fd->fd = list_size(&thread_current()->file_list) + 2; 
   list_push_back(&thread_current()->file_list, &new_file_with_fd->elem);
 
-  // Page allocation
+  // TBD: Page allocation
 
   map->mapid = thread_current()->next_mapid;
   thread_current()->next_mapid++;
@@ -404,6 +405,32 @@ static mapid_t sc_mmap(int fd, void* addr) {
 }
 
 static void sc_munmap(mapid_t mapping) {
+  struct mmapping* map = get_mmapping(mapping);
+  if (map != NULL) {
+    list_remove(&map->elem);
+
+    // TBD: Page deallocation
+
+    free(map);
+  }
+}
+
+/* gets the mapping from mapid */
+static struct mmapping* get_mmapping(mapid_t mapid) {
+  if (mapid < 1 || list_empty(&thread_current()->mmapping_list)) {
+    return NULL;
+  }
+  struct list_elem* curr_elem = list_front(&thread_current()->mmapping_list);
+  while (curr_elem != list_tail(&thread_current()->mmapping_list)) {
+    struct mmapping* map = list_entry(curr_elem, struct mmapping, elem)->mapid;
+    /* Found */
+    if (map->mapid == mapid) {
+      return map;
+    }
+    curr_elem = curr_elem->next;
+  }
+  /* Not found */
+  return NULL;
 }
 
 /* gets the given file */

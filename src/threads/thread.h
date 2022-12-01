@@ -127,7 +127,7 @@ struct thread
     int exit_status;
 
     // Task 3
-    mapid_t next_mapid;
+    mapid_t next_mapid;             /* Next mapid to be mapped, starting from 1 */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
