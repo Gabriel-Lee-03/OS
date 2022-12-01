@@ -1,6 +1,10 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
+#include <stdlib.h>
+#include <console.h>
+#include <stdlib.h>
+#include <inttypes.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "userprog/process.h"
@@ -12,8 +16,7 @@
 #include "threads/synch.h"
 #include "devices/shutdown.h"
 #include "devices/input.h"
-#include <stdlib.h>
-#include <console.h>
+
 
 // Task 2
 static void syscall_handler (struct intr_frame *);
@@ -30,6 +33,8 @@ static int sc_write (int, const void *, unsigned);
 static void sc_seek (int, unsigned);
 static unsigned sc_tell (int);
 static void sc_close (int);
+static mapid_t sc_mmap(int, void*);
+static void sc_munmap(mapid_t);
 static struct file* get_file(int);
 static void* check_mem_access(const void *);
 
@@ -57,6 +62,8 @@ syscall_handler (struct intr_frame *f UNUSED)
   void *buffer;
   unsigned size;
   unsigned position;
+  void *addr;
+  mapid_t mapping;
 
   switch (syscall_num) {
   case SYS_HALT:
@@ -154,6 +161,23 @@ syscall_handler (struct intr_frame *f UNUSED)
     fd = *(((int*)f->esp) + 1);
     sc_close(fd);
     break; 
+
+  case SYS_MMAP:
+    check_mem_access(f->esp + 1);
+    check_mem_access(f->esp + 2);
+    fd = *(((int*)f->esp) + 1);
+    addr = *(((int**)f->esp) + 2);
+    check_mem_access(addr);
+    f->eax = (mapid_t) sc_mmap(fd, addr);
+    break; 
+  
+  case SYS_MUNMAP:
+    check_mem_access(f->esp + 1);
+    mapping = *(((int*)f->esp) + 1);
+    sc_munmap(mapping);
+    break; 
+
+
   }
 }
 
@@ -340,35 +364,14 @@ static void sc_close (int fd) {
   }
   list_entry(curr_elem, struct file_with_fd, elem)->file_ptr = NULL;
   lock_release(&file_lock);
+}
 
-  /*
-    lock_acquire(&file_lock);
-
-  // if the list is empty, return straight away
-  if (list_empty(&thread_current()->file_list)) {
-    lock_release(&file_lock);
-    return;
+  static mapid_t sc_mmap(int fd, void* addr) {
+    return 0;
   }
 
-  // loop through the threads file list, if the fd matches, close the file and remove it from the list the return
-  struct list_elem *temp_elem;
-  for (temp_elem = list_front(&thread_current()->file_list);
-    temp_elem != list_tail(&thread_current()->file_list);
-    temp_elem = list_next(&temp_elem)) {
-      struct file_with_fd *f = list_entry (temp_elem, struct file_with_fd, elem);
-      if (f->fd == fd){
-        file_close(f->file_ptr);
-        list_remove(&f->elem);
-        lock_release(&file_lock);
-        return;
-      }
-    }
-
-    // if the file wasn't found, release the lock then return
-    lock_release(&file_lock);
-    return;
-  */
-}
+  static void sc_munmap(mapid_t mapping) {
+  }
 
 /* gets the given file */
 static struct file* get_file(int fd) {
