@@ -9,6 +9,7 @@
 struct page {
     struct thread* owner;
     struct frame_table_entry* entry;
+    struct supp_page_table_entry* supp_page_entry;
 };
 
 struct supp_page_table_entry {

@@ -16,7 +16,7 @@ void add() {
 }
 */
 
-static bool add_page (struct supp_page_table_entry *p) {
+static bool add_page (struct page *p) {
     /* try to allocate a frame, returns false if it can't */
     p->entry = frame_alloc (p);
     if (p->entry == NULL) {
@@ -24,8 +24,8 @@ static bool add_page (struct supp_page_table_entry *p) {
     }
 
     /* if the page has a file, copy the data from said file */
-    if (p->f != NULL) {
-        off_t read = file_read_at (p->f, p->entry->frame_ptr, p->f_size, p->f_offset);
+    if (p->supp_page_entry->f != NULL) {
+        off_t read = file_read_at (p->supp_page_entry->f, p->entry->frame_ptr, p->supp_page_entry->f_size, p->supp_page_entry->f_offset);
         memset (p->entry->frame_ptr + read, 0, (PGSIZE - read));
     } else {
         /* if not, add an all 0 page */
@@ -35,6 +35,9 @@ static bool add_page (struct supp_page_table_entry *p) {
     return true;
 }
 
+
+//not sure how to do this as we need access to entry but only have the supp_page_table_entry
+//maybe need to combine the two, im not sure
 bool add_from_page_fault (void *fault_addr) {
     /* if the current thread doesn't have a page table it can't handle the fault */
     if (thread_current()->supp_page_table == NULL) {
