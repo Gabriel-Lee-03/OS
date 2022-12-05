@@ -41,10 +41,11 @@ static bool add_page (struct supp_page_table_entry *p) {
 //not sure how to do this as we need access to entry but only have the supp_page_table_entry
 //maybe need to combine the two, im not sure
 bool add_from_page_fault (void *fault_addr) {
-    /* if the current thread doesn't have a page table it can't handle the fault */
-    if (thread_current()->supp_page_table == NULL) {
+    // if the current thread doesn't have a page table it can't handle the fault
+    if (&thread_current()->supp_page_table == NULL) {
         return false;
     }
+
 
     /* searches for the page, if it doesn't exist, return false */
     struct supp_page_table_entry *p = page_info_lookup (fault_addr);

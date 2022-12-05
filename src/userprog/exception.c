@@ -146,8 +146,7 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
 
-  
-   /* task 3 */
+   // Task 3
    if (not_present && user) {
       if (!add_from_page_fault (fault_addr)) {
          thread_exit();

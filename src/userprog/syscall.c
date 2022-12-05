@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <console.h>
 #include <string.h>
+#include <stdlib.h>
+#include <inttypes.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "userprog/process.h"
@@ -14,7 +16,6 @@
 #include "filesys/filesys.h"
 #include "threads/synch.h"
 #include "devices/shutdown.h"
-#include "devices/input.h"
 
 // Task 2
 static void syscall_handler (struct intr_frame *);
@@ -31,8 +32,19 @@ static int sc_write (int, const void *, unsigned);
 static void sc_seek (int, unsigned);
 static unsigned sc_tell (int);
 static void sc_close (int);
+static mapid_t sc_mmap(int, void*);
+static void sc_munmap(mapid_t);
+static struct mmapping* get_mmapping(mapid_t);
 static struct file* get_file(int);
 static void* check_mem_access(const void *);
+
+static struct mmapping {
+    mapid_t mapid;
+    int fd;
+    uint8_t* begin_addr;
+    uint8_t* end_addr;
+    struct list_elem elem;
+};
 
 void
 syscall_init (void) 
@@ -58,6 +70,8 @@ syscall_handler (struct intr_frame *f UNUSED)
   void *buffer;
   unsigned size;
   unsigned position;
+  void *addr;
+  mapid_t mapping;
 
   switch (syscall_num) {
   case SYS_HALT:
@@ -155,6 +169,23 @@ syscall_handler (struct intr_frame *f UNUSED)
     fd = *(((int*)f->esp) + 1);
     sc_close(fd);
     break; 
+
+  case SYS_MMAP:
+    check_mem_access(f->esp + 1);
+    check_mem_access(f->esp + 2);
+    fd = *(((int*)f->esp) + 1);
+    addr = *(((int**)f->esp) + 2);
+    check_mem_access(addr);
+    f->eax = (mapid_t) sc_mmap(fd, addr);
+    break; 
+  
+  case SYS_MUNMAP:
+    check_mem_access(f->esp + 1);
+    mapping = *(((int*)f->esp) + 1);
+    sc_munmap(mapping);
+    break; 
+
+
   }
 }
 
@@ -166,6 +197,11 @@ static void sc_halt(void) {
 
 /* terminates the current user program */
 void sc_exit(int status) {
+  while (!list_empty(&thread_current()->mmapping_list)) {
+    struct list_elem* curr_elem = list_front(&thread_current()->mmapping_list);
+    sc_munmap(list_entry(curr_elem, struct mmapping, elem)->mapid);
+  }
+
   /* saving its exit status to the current thread */
   thread_current()->exit_status = status;
   thread_exit();
@@ -341,34 +377,90 @@ static void sc_close (int fd) {
   }
   list_entry(curr_elem, struct file_with_fd, elem)->file_ptr = NULL;
   lock_release(&file_lock);
+}
 
-  /*
-    lock_acquire(&file_lock);
-
-  // if the list is empty, return straight away
-  if (list_empty(&thread_current()->file_list)) {
-    lock_release(&file_lock);
-    return;
+static mapid_t sc_mmap(int fd, void* addr) {
+  struct file *file_to_map = get_file(fd);
+  if (file_to_map == NULL || addr == 0 || pg_ofs(addr) != 0) {
+    return -1;
   }
 
-  // loop through the threads file list, if the fd matches, close the file and remove it from the list the return
-  struct list_elem *temp_elem;
-  for (temp_elem = list_front(&thread_current()->file_list);
-    temp_elem != list_tail(&thread_current()->file_list);
-    temp_elem = list_next(&temp_elem)) {
-      struct file_with_fd *f = list_entry (temp_elem, struct file_with_fd, elem);
-      if (f->fd == fd){
-        file_close(f->file_ptr);
-        list_remove(&f->elem);
-        lock_release(&file_lock);
-        return;
-      }
-    }
+  struct mmapping *map = malloc(sizeof(struct mmapping));
+  lock_acquire(&file_lock);
+  off_t length = file_length(&file_to_map);
+  lock_release(&file_lock);
 
-    // if the file wasn't found, release the lock then return
-    lock_release(&file_lock);
-    return;
+  if (length == 0) {
+    return -1;
+  }
+
+  struct file_with_fd* new_file_with_fd = malloc(sizeof(struct file_with_fd));
+  int new_file = file_reopen(file_to_map);
+  /* Generate new fd for the file and store the conversion 
+     in file_list of current thread */
+  new_file_with_fd->file_ptr = new_file;
+  new_file_with_fd->fd = list_size(&thread_current()->file_list) + 2; 
+  list_push_back(&thread_current()->file_list, &new_file_with_fd->elem);
+
+  // TBD: Page allocation
+  /*
+  off_t offset = 0
+  while (length > 0) {
+    struct page* p = // allocate ...
+    p->file = new_file;
+    p->offset = offset;
+    if (length > PGSIZE) {
+      offset += PGSIZE;
+      length -= PGSIZE;
+    }
+    else {
+      length -= PGSIZE;
+    }
+  }
   */
+
+  map->mapid = thread_current()->next_mapid;
+  thread_current()->next_mapid++;
+  map->fd = new_file_with_fd->fd;
+  map->begin_addr = addr;
+  // map->end_addr = addr + offset;
+  list_push_back(&thread_current()->mmapping_list, &map->elem);
+}
+
+static void sc_munmap(mapid_t mapping) {
+  struct mmapping* map = get_mmapping(mapping);
+  if (map != NULL) {
+    list_remove(&map->elem);
+
+    // TBD: Page deallocation
+    /*
+    void* curr_addr = map->start_addr;
+    int offset = 0
+    while (curr_addr < end->start_addr) {
+      // deallocate page ...
+        curr_addr += PGSIZE;
+    }
+    */
+    free(map);
+  }
+}
+
+/* gets the mapping from mapid */
+static struct mmapping* get_mmapping(mapid_t mapid) {
+  if (mapid < 1 || list_empty(&thread_current()->mmapping_list)) {
+    return NULL;
+  }
+  struct list_elem* curr_elem = list_front(&thread_current()->mmapping_list);
+  while (curr_elem != list_tail(&thread_current()->mmapping_list)) {
+    struct mmapping* map = list_entry(curr_elem, struct mmapping, elem)->mapid;
+    /* Found */
+    if (map->mapid == mapid) {
+      return map;
+    }
+    curr_elem = curr_elem->next;
+  }
+  /* Not found */
+  return NULL;
 }
 
 /* gets the given file */

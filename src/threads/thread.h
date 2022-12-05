@@ -6,6 +6,8 @@
 #include <hash.h>
 #include <stdint.h>
 #include "threads/synch.h"
+#include "userprog/syscall.h"
+#include "userprog/process.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -20,6 +22,9 @@ enum thread_status
    You can redefine this to whatever type you like. */
 typedef int tid_t;
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
+
+// Task 3
+typedef int mapid_t;
 
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
@@ -108,7 +113,8 @@ struct thread
     struct child_info *info;
 
     // Task 3
-    struct hash* supp_page_table;    /* Supplementry page table */
+    struct hash supp_page_table;    /* Supplementry page table */
+    struct list mmapping_list;      /* List of mmapping */
 
     struct list_elem allelem;       /* List element for all threads list. */
 
@@ -123,6 +129,9 @@ struct thread
 
     // Task 2
     int exit_status;
+
+    // Task 3
+    mapid_t next_mapid;             /* Next mapid to be mapped, starting from 1 */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
