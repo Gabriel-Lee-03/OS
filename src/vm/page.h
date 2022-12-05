@@ -5,14 +5,11 @@
 #include <inttypes.h>
 #include <hash.h>
 #include "filesys/off_t.h"
-
-struct page {
-    struct thread* owner;
-    struct frame_table_entry* entry;
-    struct supp_page_table_entry* supp_page_entry;
-};
+#include "vm/frame.h"
 
 struct supp_page_table_entry {
+    struct thread* owner;
+    struct frame_table_entry* frame_entry;
     void *user_vaddr;
     bool no_data;       /* Not expect any data */
     bool kernel_vm;     /* Lies within kernel virtual memory */

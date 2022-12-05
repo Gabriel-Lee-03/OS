@@ -1,6 +1,9 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
+#include <stdlib.h>
+#include <console.h>
+#include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "userprog/process.h"
@@ -12,8 +15,6 @@
 #include "threads/synch.h"
 #include "devices/shutdown.h"
 #include "devices/input.h"
-#include <stdlib.h>
-#include <console.h>
 
 // Task 2
 static void syscall_handler (struct intr_frame *);

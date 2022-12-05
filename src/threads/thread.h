@@ -108,7 +108,7 @@ struct thread
     struct child_info *info;
 
     // Task 3
-    struct hash supp_page_table;    /* Supplementry page table */
+    struct hash* supp_page_table;    /* Supplementry page table */
 
     struct list_elem allelem;       /* List element for all threads list. */
 

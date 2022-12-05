@@ -1,6 +1,8 @@
 #include "vm/page.h"
 #include <stdint.h>
+#include <string.h>
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 
 struct supp_page_table_entry* page_info_lookup(void *);
 uint32_t page_hash (struct hash_elem*, void *aux);
@@ -16,20 +18,20 @@ void add() {
 }
 */
 
-static bool add_page (struct page *p) {
+static bool add_page (struct supp_page_table_entry *p) {
     /* try to allocate a frame, returns false if it can't */
-    p->entry = frame_alloc (p);
-    if (p->entry == NULL) {
+    p->frame_entry = frame_alloc (p);
+    if (p->frame_entry == NULL) {
         return false;
     }
 
     /* if the page has a file, copy the data from said file */
-    if (p->supp_page_entry->f != NULL) {
-        off_t read = file_read_at (p->supp_page_entry->f, p->entry->frame_ptr, p->supp_page_entry->f_size, p->supp_page_entry->f_offset);
-        memset (p->entry->frame_ptr + read, 0, (PGSIZE - read));
+    if (p->f != NULL) {
+        off_t read = file_read_at (p->f, p->frame_entry->frame_ptr, p->f_size, p->f_offset);
+        memset (p->frame_entry->frame_ptr + read, 0, (PGSIZE - read));
     } else {
         /* if not, add an all 0 page */
-        memset (p->entry->frame_ptr, 0, PGSIZE);
+        memset (p->frame_entry->frame_ptr, 0, PGSIZE);
     }
 
     return true;
@@ -51,14 +53,14 @@ bool add_from_page_fault (void *fault_addr) {
     }
 
     /* if it doesn't have a frame, attempt to asign it one, returning false on fail */
-    if (p->entry == NULL) {
+    if (p->frame_entry == NULL) {
         if (!add_page (p)) {
             return false;
         }
     }
 
     /* set the page to the frame table, returns if it sucseeded or not */
-    return pagedir_set_page (thread_current()->pagedir, p->user_vaddr, p->entry->frame_ptr, !p->read_only);
+    return pagedir_set_page (thread_current()->pagedir, p->user_vaddr, p->frame_entry->frame_ptr, !p->read_only);
 }
 
 

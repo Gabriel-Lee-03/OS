@@ -17,14 +17,14 @@ void frame_init(void) {
             frame_size++;
             entry = &entries[frame_size];
             entry->frame_ptr = frame_ptr;
-            entry->page = NULL;
+            entry->page_entry = NULL;
             lock_init (&entry->f_lock);
             frame_ptr = palloc_get_page(PAL_USER);
         }
     }
 }
 
-struct frame_table_entry* frame_alloc(struct page* page) {
+struct frame_table_entry* frame_alloc(struct supp_page_table_entry* page_entry) {
     struct frame_table_entry* entry;
     for (int i = 0; i < frame_size; i++) {
         entry = &entries[i];
@@ -32,28 +32,28 @@ struct frame_table_entry* frame_alloc(struct page* page) {
             continue;
         }
         /* Find a free frame */
-        if (entry->page == NULL) {
-            entry->page = page;
+        if (entry->page_entry == NULL) {
+            entry->page_entry = page_entry;
             return entry;
         }
-        lock_release(&entries->lock);
+        lock_release(&entries->f_lock);
     }
     /* Run out of frames */
     return NULL;
 }
 
-void frame_lock (struct page *p) {
-    struct frame *entry = p->frame;
+void frame_lock (struct supp_page_table_entry* page_entry) {
+    struct frame_table_entry* entry = page_entry->frame_entry;
     if (entry != NULL) {
         lock_acquire (&entry->f_lock);
     }
 }
 
-void frame_unlock (struct frame *f) {
+void frame_unlock (struct frame_table_entry *f) {
     lock_release (&f->f_lock);
 }
 
 
-void frame_release (struct frame *f) {
-    f->page == NULL;
+void frame_release (struct frame_table_entry *f) {
+    f->page_entry == NULL;
 }
