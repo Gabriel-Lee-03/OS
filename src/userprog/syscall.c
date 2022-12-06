@@ -199,8 +199,9 @@ static void sc_halt(void) {
 
 /* terminates the current user program */
 void sc_exit(int status) {
+  struct list_elem* curr_elem;
   while (!list_empty(&thread_current()->mmapping_list)) {
-    struct list_elem* curr_elem = list_front(&thread_current()->mmapping_list);
+    curr_elem = list_front(&thread_current()->mmapping_list);
     sc_munmap(list_entry(curr_elem, struct mmapping, elem)->mapid);
   }
 
@@ -383,13 +384,13 @@ static void sc_close (int fd) {
 
 static mapid_t sc_mmap(int fd, void* addr) {
   struct file *file_to_map = get_file(fd);
-  if (file_to_map == NULL || addr == 0 || pg_ofs(addr) != 0) {
+  if (file_to_map == NULL || addr == NULL || pg_ofs(addr) != 0) {
     return -1;
   }
 
   struct mmapping *map = malloc(sizeof(struct mmapping));
   lock_acquire(&file_lock);
-  off_t length = file_length(&file_to_map);
+  off_t length = file_length(file_to_map);
   lock_release(&file_lock);
 
   if (length == 0) {
@@ -398,8 +399,12 @@ static mapid_t sc_mmap(int fd, void* addr) {
 
   struct file_with_fd* new_file_with_fd = malloc(sizeof(struct file_with_fd));
   lock_acquire(&file_lock);
-  int new_file = file_reopen(file_to_map);
+  struct file* new_file = file_reopen(file_to_map);
   lock_release(&file_lock);
+  if (new_file == NULL) {
+    free(new_file_with_fd);
+    return -1;
+  }
   /* Generate new fd for the file and store the conversion 
      in file_list of current thread */
   new_file_with_fd->file_ptr = new_file;
@@ -409,7 +414,7 @@ static mapid_t sc_mmap(int fd, void* addr) {
   // Page allocation
   off_t offset = 0;
   while (length > 0) {
-    struct supp_page_table_entry* entry = new_page(addr);
+    struct supp_page_table_entry* entry = new_page(addr + offset);
     entry->f = new_file;
     entry->f_offset = offset;
     if (length > PGSIZE) {
@@ -430,6 +435,7 @@ static mapid_t sc_mmap(int fd, void* addr) {
   map->begin_addr = addr;
   map->end_addr = addr + offset;
   list_push_back(&thread_current()->mmapping_list, &map->elem);
+  return map->mapid;
 }
 
 static void sc_munmap(mapid_t mapping) {
