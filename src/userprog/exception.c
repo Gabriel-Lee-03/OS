@@ -153,6 +153,7 @@ page_fault (struct intr_frame *f)
       }
       return;
    }
+   */
 
   printf ("Page fault at %p: %s error %s page in %s context.\n",
           fault_addr,

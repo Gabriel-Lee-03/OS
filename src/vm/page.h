@@ -6,10 +6,12 @@
 #include <hash.h>
 #include "filesys/off_t.h"
 #include "vm/frame.h"
+#include "devices/block.h"
 
 struct supp_page_table_entry {
     struct thread* owner;
     struct frame_table_entry* frame_entry;
+    block_sector_t first_sector;
     void *user_vaddr;
     bool no_data;       /* Not expect any data */
     bool kernel_vm;     /* Lies within kernel virtual memory */

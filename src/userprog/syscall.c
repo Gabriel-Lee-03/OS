@@ -16,6 +16,7 @@
 #include "filesys/filesys.h"
 #include "threads/synch.h"
 #include "devices/shutdown.h"
+#include "devices/input.h"
 
 // Task 2
 static void syscall_handler (struct intr_frame *);
