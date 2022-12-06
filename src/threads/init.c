@@ -38,6 +38,7 @@
 #include "filesys/fsutil.h"
 #endif
 #ifdef VM
+#include "devices/swap.h"
 #include "vm/frame.h"
 #endif
 
@@ -131,6 +132,7 @@ main (void)
 #endif
 
 #ifdef VM
+  swap_init();
   frame_init();
 #endif
 
