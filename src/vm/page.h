@@ -5,10 +5,12 @@
 #include <inttypes.h>
 #include <hash.h>
 #include "filesys/off_t.h"
+#include "devices/block.h"
 
 struct page {
     struct thread* owner;
     struct frame_table_entry* entry;
+    block_sector_t first_sector;
 };
 
 struct supp_page_table_entry {
