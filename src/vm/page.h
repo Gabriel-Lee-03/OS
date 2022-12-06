@@ -24,6 +24,7 @@ struct supp_page_table_entry {
 };
 
 struct supp_page_table_entry* new_page(void*);
+void remove_page(void*);
 bool add_from_page_fault (void*);
 struct supp_page_table_entry* page_info_lookup(void*);
 uint32_t page_hash (struct hash_elem*, void *aux);

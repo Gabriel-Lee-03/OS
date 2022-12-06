@@ -1,6 +1,7 @@
 #include "vm/page.h"
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
@@ -15,6 +16,7 @@ struct supp_page_table_entry* new_page(void *user_vaddr) {
     entry->f_offset = 0;
     entry->f_size = 0;
     hash_insert(&thread_current()->supp_page_table, &entry->h_elem);
+    return entry;
 }
 
 void remove_page(void *user_vaddr) {
@@ -74,10 +76,10 @@ bool add_from_page_fault (void *fault_addr) {
 
 
 struct supp_page_table_entry* page_info_lookup(void *user_vaddr) {
-    struct supp_page_table_entry* entry;
-    entry->user_vaddr = user_vaddr;
+    struct supp_page_table_entry entry;
+    entry.user_vaddr = user_vaddr;
 
-    struct hash_elem* result = hash_find(&thread_current()->supp_page_table, &entry->h_elem);
+    struct hash_elem* result = hash_find(&thread_current()->supp_page_table, &entry.h_elem);
     if (result == NULL) {
         return NULL;
     }
@@ -101,5 +103,5 @@ bool page_less (const struct hash_elem *a_elem, const struct hash_elem *b_elem,
 
 void page_free(struct hash_elem* elem, void *aux UNUSED) {
     struct supp_page_table_entry *entry = hash_entry (elem, struct supp_page_table_entry, h_elem);
-    // free(entry);
+    free(entry);
 }

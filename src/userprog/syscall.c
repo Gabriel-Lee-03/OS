@@ -441,7 +441,7 @@ static void sc_munmap(mapid_t mapping) {
     void* curr_addr = map->begin_addr;
     int offset = 0;
     while (curr_addr < map->begin_addr) {
-      page_remove(curr_addr);
+      remove_page(curr_addr);
       curr_addr += PGSIZE;
     }
     free(map);

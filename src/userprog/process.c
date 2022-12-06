@@ -558,7 +558,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       else {
         entry->read_only = true;
       }
-
       entry->f = file;
       entry->f_offset = ofs;
       entry->f_size = page_read_bytes;

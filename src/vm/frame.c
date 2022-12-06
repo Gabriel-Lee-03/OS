@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "vm/frame.h"
 #include "threads/palloc.h"
 
