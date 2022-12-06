@@ -20,17 +20,17 @@ swap_init() {
 }
 
 void
-swap_from_disk (struct page *p) {
+swap_from_disk (struct supp_page_table_entry *p) {
     lock_acquire (&swap_lock);
     for (size_t i = 0; i < SECTORS_PER_PAGE; i++) {
-        block_read (swap_block, p->first_sector + i, p->entry->frame_ptr + (i * BLOCK_SECTOR_SIZE));
+        block_read (swap_block, p->first_sector + i, p->frame_entry->frame_ptr + (i * BLOCK_SECTOR_SIZE));
         bitmap_reset (swap_bitmap, p->first_sector + i);
     }
     lock_release (&swap_lock);
 }
 
 void
-swap_to_disk (struct page *p) {
+swap_to_disk (struct supp_page_table_entry *p) {
     lock_acquire (&swap_lock);
     size_t swap_slot = bitmap_scan_and_flip (swap_bitmap, 0, SECTORS_PER_PAGE, false);
     lock_release (&swap_lock);
@@ -40,6 +40,6 @@ swap_to_disk (struct page *p) {
     p->first_sector = swap_slot;
 
     for (size_t i = 0; i < SECTORS_PER_PAGE; i++) {
-        block_write (swap_block, p->first_sector + i, p->entry->frame_ptr + (i * BLOCK_SECTOR_SIZE));
+        block_write (swap_block, p->first_sector + i, p->frame_entry->frame_ptr + (i * BLOCK_SECTOR_SIZE));
     }
 }
