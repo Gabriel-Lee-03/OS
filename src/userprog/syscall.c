@@ -17,6 +17,7 @@
 #include "threads/synch.h"
 #include "devices/shutdown.h"
 #include "devices/input.h"
+#include "vm/page.h"
 
 // Task 2
 static void syscall_handler (struct intr_frame *);
@@ -396,35 +397,38 @@ static mapid_t sc_mmap(int fd, void* addr) {
   }
 
   struct file_with_fd* new_file_with_fd = malloc(sizeof(struct file_with_fd));
+  lock_acquire(&file_lock);
   int new_file = file_reopen(file_to_map);
+  lock_release(&file_lock);
   /* Generate new fd for the file and store the conversion 
      in file_list of current thread */
   new_file_with_fd->file_ptr = new_file;
   new_file_with_fd->fd = list_size(&thread_current()->file_list) + 2; 
   list_push_back(&thread_current()->file_list, &new_file_with_fd->elem);
 
-  // TBD: Page allocation
-  /*
-  off_t offset = 0
+  // Page allocation
+  off_t offset = 0;
   while (length > 0) {
-    struct page* p = // allocate ...
-    p->file = new_file;
-    p->offset = offset;
+    struct supp_page_table_entry* entry = new_page(addr);
+    entry->f = new_file;
+    entry->f_offset = offset;
     if (length > PGSIZE) {
+      entry->f_size = PGSIZE;
       offset += PGSIZE;
       length -= PGSIZE;
     }
     else {
+      entry->f_size = length;
+      offset += length;
       length -= PGSIZE;
     }
   }
-  */
 
   map->mapid = thread_current()->next_mapid;
   thread_current()->next_mapid++;
   map->fd = new_file_with_fd->fd;
   map->begin_addr = addr;
-  // map->end_addr = addr + offset;
+  map->end_addr = addr + offset;
   list_push_back(&thread_current()->mmapping_list, &map->elem);
 }
 
@@ -433,15 +437,13 @@ static void sc_munmap(mapid_t mapping) {
   if (map != NULL) {
     list_remove(&map->elem);
 
-    // TBD: Page deallocation
-    /*
-    void* curr_addr = map->start_addr;
-    int offset = 0
-    while (curr_addr < end->start_addr) {
-      // deallocate page ...
-        curr_addr += PGSIZE;
+    // Page deallocation
+    void* curr_addr = map->begin_addr;
+    int offset = 0;
+    while (curr_addr < map->begin_addr) {
+      page_remove(curr_addr);
+      curr_addr += PGSIZE;
     }
-    */
     free(map);
   }
 }

@@ -550,12 +550,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
       
-      struct supp_page_table_entry* entry = malloc(sizeof(struct supp_page_table_entry));
-      if (entry == NULL) {
-        free(entry);
-        return false;
-      }
-      entry->user_vaddr = upage;
+      struct supp_page_table_entry* entry = new_page(upage);
       entry->no_data = false;
       if (writable) {
         entry->read_only = false;
@@ -566,7 +561,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
       entry->f = file;
       entry->f_offset = ofs;
-      off_t f_size;
+      entry->f_size = page_read_bytes;
       hash_insert(&thread_current()->supp_page_table, &entry->h_elem);
 
       /* Check if virtual page already allocated */

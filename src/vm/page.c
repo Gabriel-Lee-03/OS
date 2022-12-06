@@ -4,19 +4,30 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
-struct supp_page_table_entry* page_info_lookup(void *);
-uint32_t page_hash (struct hash_elem*, void *aux);
-bool page_less (const struct hash_elem*, const struct hash_elem*,
-           void *aux);
-void page_free(struct hash_elem*, void *aux);
-// TBD: Add
-/*
-void add() {
+static bool add_page (struct supp_page_table_entry *);
+
+struct supp_page_table_entry* new_page(void *user_vaddr) {
     struct supp_page_table_entry* entry = malloc(sizeof(struct supp_page_table_entry));
-    // Set variables
-    // hash_insert()
+    entry->owner = thread_current();
+    entry->user_vaddr = user_vaddr;
+    entry->frame_entry = NULL;
+    entry->f = NULL;
+    entry->f_offset = 0;
+    entry->f_size = 0;
+    hash_insert(&thread_current()->supp_page_table, &entry->h_elem);
 }
-*/
+
+void remove_page(void *user_vaddr) {
+    struct supp_page_table_entry* entry = page_info_lookup(user_vaddr);
+    frame_lock(entry);
+    if (entry->frame_entry != NULL) {
+        free(entry->frame_entry);
+    }
+    entry->frame_entry = NULL;
+    frame_unlock(entry);
+    hash_delete(&thread_current()->supp_page_table, &entry->h_elem);
+    free(entry);
+}
 
 static bool add_page (struct supp_page_table_entry *p) {
     /* try to allocate a frame, returns false if it can't */
@@ -37,9 +48,6 @@ static bool add_page (struct supp_page_table_entry *p) {
     return true;
 }
 
-
-//not sure how to do this as we need access to entry but only have the supp_page_table_entry
-//maybe need to combine the two, im not sure
 bool add_from_page_fault (void *fault_addr) {
     // if the current thread doesn't have a page table it can't handle the fault
     if (&thread_current()->supp_page_table == NULL) {

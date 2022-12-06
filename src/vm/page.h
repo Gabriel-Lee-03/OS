@@ -23,10 +23,13 @@ struct supp_page_table_entry {
     struct hash_elem h_elem;
 };
 
-struct supp_page_table_entry* page_info_lookup(void *);
-uint32_t page_hash (struct hash_elem *, void *aux);
-bool page_less (const struct hash_elem *, const struct hash_elem *,
+struct supp_page_table_entry* new_page(void*);
+bool add_from_page_fault (void*);
+struct supp_page_table_entry* page_info_lookup(void*);
+uint32_t page_hash (struct hash_elem*, void *aux);
+bool page_less (const struct hash_elem*, const struct hash_elem *,
            void *aux);
 void page_free(struct hash_elem*, void *aux);
+
 
 #endif /* vm/page.h */
