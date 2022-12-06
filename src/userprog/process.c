@@ -203,7 +203,7 @@ process_exit (void)
   uint32_t *pd;
 
   // Task 3
-  hash_destroy (&cur->supp_page_table, page_free);
+  hash_destroy(&cur->supp_page_table, page_free);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -550,6 +550,25 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
       
+      struct supp_page_table_entry* entry = malloc(sizeof(struct supp_page_table_entry));
+      if (entry == NULL) {
+        free(entry);
+        return false;
+      }
+      entry->user_vaddr = upage;
+      entry->no_data = false;
+      if (writable) {
+        entry->read_only = false;
+      }
+      else {
+        entry->read_only = true;
+      }
+
+      entry->f = file;
+      entry->f_offset = ofs;
+      off_t f_size;
+      hash_insert(&thread_current()->supp_page_table, &entry->h_elem);
+
       /* Check if virtual page already allocated */
       struct thread *t = thread_current ();
       uint8_t *kpage = pagedir_get_page (t->pagedir, upage);

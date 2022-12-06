@@ -14,7 +14,6 @@ struct supp_page_table_entry {
     block_sector_t first_sector;
     void *user_vaddr;
     bool no_data;       /* Not expect any data */
-    bool kernel_vm;     /* Lies within kernel virtual memory */
     bool read_only;     /* Read-only page */
 
     struct file *f;
