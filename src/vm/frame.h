@@ -5,6 +5,8 @@
 #include "vm/page.h"
 #include "threads/synch.h"
 
+#define MAX_FRAME_SIZE (1024 * 1024)
+
 struct frame_table_entry {
     void* frame_ptr;
     struct supp_page_table_entry* page_entry;

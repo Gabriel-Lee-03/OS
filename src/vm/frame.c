@@ -5,9 +5,6 @@
 #include "threads/thread.h"
 #include "userprog/pagedir.h"
 
-
-#define MAX_FRAME_SIZE (1024 * 1024)
-
 static struct frame_table_entry* entries;
 static int frame_table_size;
 

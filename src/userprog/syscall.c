@@ -348,7 +348,6 @@ static void sc_seek (int fd, unsigned position) {
   lock_acquire(&file_lock);
   file_seek(file, position);
   lock_release(&file_lock);
-  
 }
 
 /* returns the next byte's position in the open file */
@@ -385,7 +384,7 @@ static void sc_close (int fd) {
 
 static mapid_t sc_mmap(int fd, void* addr) {
   struct file *file_to_map = get_file(fd);
-  if (file_to_map == NULL || addr == NULL || pg_ofs(addr) != 0) {
+  if (file_to_map == NULL || addr == 0 || pg_ofs(addr) != 0) {
     return -1;
   }
 
@@ -429,6 +428,19 @@ static mapid_t sc_mmap(int fd, void* addr) {
       length -= PGSIZE;
     }
   }
+
+  /* Checks if there are overlap mappings */
+  if (!list_empty(&thread_current()->mmapping_list)) {
+    struct list_elem* curr_elem = list_front(&thread_current()->mmapping_list);
+    while (curr_elem != list_tail(&thread_current()->mmapping_list)) {
+      struct mmapping* map = list_entry(curr_elem, struct mmapping, elem);
+      if (map->begin_addr < addr + offset && map->end_addr > addr + offset) {
+        return -1;
+      }
+      curr_elem = curr_elem->next;
+    }
+  }
+
 
   map->mapid = thread_current()->next_mapid;
   thread_current()->next_mapid++;
