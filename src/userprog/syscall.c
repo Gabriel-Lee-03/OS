@@ -187,7 +187,8 @@ syscall_handler (struct intr_frame *f UNUSED)
     sc_munmap(mapping);
     break; 
 
-
+  default:
+    sc_exit(-1);
   }
 }
 

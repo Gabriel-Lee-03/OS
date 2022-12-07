@@ -203,6 +203,7 @@ process_exit (void)
   uint32_t *pd;
 
   // Task 3
+  /* Destroy the hash supplementary page table */
   hash_destroy(&cur->supp_page_table, page_free);
 
   /* Destroy the current process's page directory and switch back
@@ -243,8 +244,9 @@ process_exit (void)
     for (struct list_elem* temp_elem = list_front(&thread_current()->dead_child_list);
     temp_elem != list_tail(&thread_current()->dead_child_list);
     temp_elem = list_next(&temp_elem)) {
-      struct child_info *info = list_entry(temp_elem, struct child_info, elem);
-      free(info);
+      struct child_info* info = list_entry(temp_elem, struct child_info, elem);
+      list_remove(&temp_elem);
+      free(info); 
     }
   }
 
@@ -561,7 +563,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       entry->f = file;
       entry->f_offset = ofs;
       entry->f_size = page_read_bytes;
-      hash_insert(&thread_current()->supp_page_table, &entry->h_elem);
 
       /* Check if virtual page already allocated */
       struct thread *t = thread_current ();
@@ -603,6 +604,9 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
       upage += PGSIZE;
+
+      // Task 3
+      ofs += page_read_bytes;
     }
   return true;
 }
@@ -620,26 +624,36 @@ setup_stack (void **esp, char* file_name)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success) {
+        // Task 3
+        struct supp_page_table_entry* entry = new_page(((uint8_t *) PHYS_BASE) - PGSIZE);
+        entry->no_data = false;
+        entry->read_only = false;
+        
         *esp = PHYS_BASE;
 
-        
-      // Task 2
-      // splits the old file name into its actual name and args
+        // Task 2
+        // splits the old file name into its actual name and args
         char* token;
         char* save_ptr;
         int argc = 0;
         int total_size = 0;
-        char* arg_address[100];
+        char* arg_address[500];
 
         for (token = strtok_r (file_name, " ", &save_ptr); 
           token != NULL; token = strtok_r (NULL, " ", &save_ptr))
           {
             int len_arg = (strlen(token) + 1) * sizeof(char);
+            if (len_arg > 500) {
+              sc_exit(-1);
+            }
             total_size += (uint8_t) len_arg;
             *esp -= len_arg;
             memcpy(*esp, token, len_arg);
             arg_address[argc] = (uint32_t) *esp;
             argc++;
+            if (argc > 500) {
+              sc_exit(-1);
+            }
           }
 
          /* adds the word-align bytes */
