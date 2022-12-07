@@ -560,9 +560,11 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       else {
         entry->read_only = true;
       }
-      entry->f = file;
-      entry->f_offset = ofs;
-      entry->f_size = page_read_bytes;
+      if (page_read_bytes > 0) {
+        entry->f = file;
+        entry->f_offset = ofs;
+        entry->f_size = page_read_bytes;
+      }
 
       /* Check if virtual page already allocated */
       struct thread *t = thread_current ();
@@ -689,7 +691,6 @@ setup_stack (void **esp, char* file_name)
         void *zero_void = 0;
         memcpy(*esp, &zero_void, sizeof(int));
         
-        //hex_dump(*esp, *esp, PHYS_BASE - *esp, 0);
       }
       else
         palloc_free_page (kpage);
