@@ -5,6 +5,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "vm/page.h"
+#include "userprog/syscall.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -102,7 +103,8 @@ kill (struct intr_frame *f)
          Shouldn't happen.  Panic the kernel. */
       printf ("Interrupt %#04x (%s) in unknown segment %04x\n",
              f->vec_no, intr_name (f->vec_no), f->cs);
-      PANIC ("Kernel bug - this shouldn't be possible!");
+      // Task 3
+      sc_exit(-1);
     }
 }
 
@@ -149,7 +151,7 @@ page_fault (struct intr_frame *f)
    // Task 3
    if (not_present && user) {
       if (!add_from_page_fault (fault_addr)) {
-         thread_exit();
+         sc_exit(-1);
       }
       return;
    }

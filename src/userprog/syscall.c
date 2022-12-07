@@ -461,7 +461,7 @@ static struct mmapping* get_mmapping(mapid_t mapid) {
   }
   struct list_elem* curr_elem = list_front(&thread_current()->mmapping_list);
   while (curr_elem != list_tail(&thread_current()->mmapping_list)) {
-    struct mmapping* map = list_entry(curr_elem, struct mmapping, elem)->mapid;
+    struct mmapping* map = list_entry(curr_elem, struct mmapping, elem);
     /* Found */
     if (map->mapid == mapid) {
       return map;
