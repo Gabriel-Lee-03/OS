@@ -2,11 +2,16 @@
 #include <stdlib.h>
 #include "vm/frame.h"
 #include "threads/palloc.h"
+#include "threads/thread.h"
+#include "userprog/pagedir.h"
+
 
 #define MAX_FRAME_SIZE (1024 * 1024)
 
 static struct frame_table_entry* entries;
-static int frame_size;
+static int frame_table_size;
+
+static struct lock frame_alloc_lock;
 
 void frame_init(void) {
     void* frame_ptr;
@@ -15,31 +20,71 @@ void frame_init(void) {
     if (entries != NULL) {
         frame_ptr = palloc_get_page(PAL_USER);
         while (frame_ptr != NULL) {
-            frame_size++;
-            entry = &entries[frame_size];
+            frame_table_size++;
+            entry = &entries[frame_table_size];
             entry->frame_ptr = frame_ptr;
             entry->page_entry = NULL;
             lock_init (&entry->f_lock);
             frame_ptr = palloc_get_page(PAL_USER);
         }
     }
+    lock_init (&frame_alloc_lock);
 }
 
 struct frame_table_entry* frame_alloc(struct supp_page_table_entry* page_entry) {
     struct frame_table_entry* entry;
-    for (int i = 0; i < frame_size; i++) {
+    lock_acquire (&frame_alloc_lock);
+
+    for (int i = 0; i < frame_table_size; i++) {
         entry = &entries[i];
-        if (!lock_try_acquire(&entries->f_lock)){
+        if (!lock_try_acquire(&entry->f_lock)){
             continue;
         }
         /* Find a free frame */
         if (entry->page_entry == NULL) {
             entry->page_entry = page_entry;
+            lock_release (&frame_alloc_lock);
             return entry;
         }
         lock_release(&entries->f_lock);
     }
-    /* Run out of frames */
+
+    /* No free frame, so need to evict a frame. */
+    static size_t loop_helper = 0;
+    for (int i = 0; i < frame_table_size * 2; i++) {
+
+        struct frame_table_entry *entry = &entries[loop_helper];
+
+        loop_helper++;
+        if (loop_helper >= frame_table_size) {
+            loop_helper = 0;
+        }
+
+        if (!lock_try_acquire(&entry->f_lock)){
+            continue;
+        }
+
+        /* If frame does not have a page, for example if it was emptied 
+        during this process, allocate directly. */
+        if (entry->page_entry == NULL) {
+            entry->page_entry = page_entry;
+            lock_release (&frame_alloc_lock);
+            return entry;
+        }
+
+        if (pagedir_is_accessed (entry->page_entry->owner->pagedir, entry->page_entry->user_vaddr)) {
+            pagedir_set_accessed (entry->page_entry->owner->pagedir, entry->page_entry->user_vaddr, false);
+            lock_release (&entry->f_lock);
+            continue;
+        }
+
+        lock_release (&frame_alloc_lock);
+        evict_page (entry->page_entry);
+        entry->page_entry = page_entry;
+        return entry;
+    }
+    /* Run out of frames and swap slot. */
+    lock_release (&frame_alloc_lock);
     return NULL;
 }
 

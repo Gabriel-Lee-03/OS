@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "filesys/file.h"
 
 static bool add_page (struct supp_page_table_entry *);
 
@@ -26,7 +27,7 @@ void remove_page(void *user_vaddr) {
         free(entry->frame_entry);
     }
     entry->frame_entry = NULL;
-    frame_unlock(entry);
+    frame_unlock(entry->frame_entry);
     hash_delete(&thread_current()->supp_page_table, &entry->h_elem);
     free(entry);
 }
@@ -101,7 +102,21 @@ bool page_less (const struct hash_elem *a_elem, const struct hash_elem *b_elem,
   return a_page->user_vaddr < b_page->user_vaddr;
 }
 
-void page_free(struct hash_elem* elem, void *aux UNUSED) {
+void page_free (struct hash_elem *elem, void *aux UNUSED) {
     struct supp_page_table_entry *entry = hash_entry (elem, struct supp_page_table_entry, h_elem);
     free(entry);
+}
+
+void
+evict_page (struct supp_page_table_entry *p) {
+    pagedir_clear_page (p->owner->pagedir, p->user_vaddr);
+    if (pagedir_is_dirty (p->owner->pagedir, p-> user_vaddr)) {
+        if (!(p->f == NULL) && writable_file (p->f)) {
+            file_write_at (p->f, p->frame_entry->frame_ptr, p->f_size, p->f_offset);
+        }
+        else {
+            p->first_sector = swap_out (p->frame_entry->frame_ptr);
+        }
+    }
+    p->frame_entry = NULL;
 }
