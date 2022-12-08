@@ -46,7 +46,7 @@ struct frame_table_entry* frame_alloc(struct supp_page_table_entry* page_entry) 
             lock_release (&frame_alloc_lock);
             return entry;
         }
-        lock_release(&entries->f_lock);
+        lock_release(&entry->f_lock);
     }
 
     /* No free frame, so need to evict a frame. */
