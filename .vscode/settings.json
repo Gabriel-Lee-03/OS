@@ -34,7 +34,8 @@
         "palloc.h": "c",
         "page.h": "c",
         "pagedir.h": "c",
-        "directory.h": "c"
+        "directory.h": "c",
+        "stdbool.h": "c"
     },
     "C_Cpp.errorSquiggles": "Enabled"
 }

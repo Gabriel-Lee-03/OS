@@ -29,6 +29,8 @@ void frame_init(void) {
     lock_init (&frame_alloc_lock);
 }
 
+/* Allocates a frame by looking for a free frame, and if none exist, evicting a page to get a frame.
+   Also locks the frame. */
 struct frame_table_entry* frame_alloc(struct supp_page_table_entry* page_entry) {
     struct frame_table_entry* entry;
     lock_acquire (&frame_alloc_lock);

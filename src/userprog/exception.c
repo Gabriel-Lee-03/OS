@@ -6,6 +6,7 @@
 #include "threads/thread.h"
 #include "vm/page.h"
 #include "userprog/syscall.h"
+#include "threads/vaddr.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -149,12 +150,25 @@ page_fault (struct intr_frame *f)
   user = (f->error_code & PF_U) != 0;
 
    // Task 3
+   struct supp_page_table_entry *p = page_info_lookup (fault_addr);
+
+   if (p == NULL) {
+      /* If the address is less than or equal to 32 bytes below the stack pointer and is within the 
+         STACK_MAX_SIZE, allocate a new stack page. */
+      if (fault_addr >= (f->esp - 32) && (PHYS_BASE - pg_round_down (fault_addr)) <= STACK_MAX_SIZE) {
+         p = new_page (pg_round_down (fault_addr), false);
+      }
+   }
+   
    if (not_present && user) {
-      if (!add_from_page_fault (fault_addr)) {
+      if (!add_from_page_fault (p)) {
          sc_exit(-1);
       }
       return;
    }
+   // else if (user || not_present) {
+   //    sc_exit (-1);
+   // }
 
   printf ("Page fault at %p: %s error %s page in %s context.\n",
           fault_addr,
