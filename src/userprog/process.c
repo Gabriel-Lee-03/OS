@@ -574,69 +574,80 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp, char* file_name) 
 {
-        // Task 3
-        struct supp_page_table_entry* entry = new_page(((uint8_t *) PHYS_BASE) - PGSIZE, false);
-        entry->no_data = false;
+  // Task 3
+  /* Allocate page */
+  struct supp_page_table_entry* entry = new_page(((uint8_t *) PHYS_BASE) - PGSIZE, false);
+  entry->no_data = false;
+  if (!add_from_page_fault(entry)){
+    return false;
+  }
+
+  /* Allocate frame 
+  entry->frame_entry = frame_alloc(entry);
+  if (entry->frame_entry == NULL) {
+      return false;
+  }
+  */
         
-        *esp = PHYS_BASE;
+  *esp = PHYS_BASE;
 
-        // Task 2
-        // splits the old file name into its actual name and args
-        char* token;
-        char* save_ptr;
-        int argc = 0;
-        int total_size = 0;
-        char* arg_address[500];
+  // Task 2
+  // splits the old file name into its actual name and args
+  char* token;
+  char* save_ptr;
+  int argc = 0;
+  int total_size = 0;
+  char* arg_address[500];
 
-        for (token = strtok_r (file_name, " ", &save_ptr); 
-          token != NULL; token = strtok_r (NULL, " ", &save_ptr))
-          {
-            int len_arg = (strlen(token) + 1) * sizeof(char);
-            if (len_arg > 500) {
-              sc_exit(-1);
-            }
-            total_size += (uint8_t) len_arg;
-            *esp -= len_arg;
-            memcpy(*esp, token, len_arg);
-            arg_address[argc] = (uint32_t) *esp;
-            argc++;
-            if (argc > 500) {
-              sc_exit(-1);
-            }
-          }
+  for (token = strtok_r (file_name, " ", &save_ptr); 
+    token != NULL; token = strtok_r (NULL, " ", &save_ptr))
+    {
+      int len_arg = (strlen(token) + 1) * sizeof(char);
+      if (len_arg > 500) {
+        sc_exit(-1);
+      }
+      total_size += (uint8_t) len_arg;
+      *esp -= len_arg;
+      memcpy(*esp, token, len_arg);
+      arg_address[argc] = (uint32_t) *esp;
+      argc++;
+      if (argc > 500) {
+        sc_exit(-1);
+      }
+    }
 
-         /* adds the word-align bytes */
-        while (total_size % 4 != 0) {
-          *esp -= sizeof(char);
-          char word_align = 0;
-          memcpy(*esp, &word_align, sizeof(char));
-          total_size += sizeof(char);
-        }
+    /* adds the word-align bytes */
+  while (total_size % 4 != 0) {
+    *esp -= sizeof(char);
+    char word_align = 0;
+    memcpy(*esp, &word_align, sizeof(char));
+    total_size += sizeof(char);
+  }
 
-        /* adds a 0 byte for arg 4 */
-        *esp -= sizeof(int);
-        char *zero_char = 0;
-        memcpy(*esp, &zero_char, sizeof(int));
+  /* adds a 0 byte for arg 4 */
+  *esp -= sizeof(int);
+  char *zero_char = 0;
+  memcpy(*esp, &zero_char, sizeof(int));
 
-        /* adds the address for each arg in the added order */
-        for (int i = argc - 1; i >= 0; i--) {
-          *esp -= sizeof(int);
-          memcpy(*esp, &arg_address[i], sizeof(int));
-        }
-        uint32_t curr_address = (uint32_t) *esp;
+  /* adds the address for each arg in the added order */
+  for (int i = argc - 1; i >= 0; i--) {
+    *esp -= sizeof(int);
+    memcpy(*esp, &arg_address[i], sizeof(int));
+  }
+  uint32_t curr_address = (uint32_t) *esp;
 
-        /* adds the address to to address of the first arg */
-        *esp -= sizeof(int);
-        memcpy(*esp, &curr_address, sizeof(int));
+  /* adds the address to to address of the first arg */
+  *esp -= sizeof(int);
+  memcpy(*esp, &curr_address, sizeof(int));
 
-        /* adds the argc */
-        *esp -= sizeof(int);
-        memcpy(*esp, &argc, sizeof(int));
+  /* adds the argc */
+  *esp -= sizeof(int);
+  memcpy(*esp, &argc, sizeof(int));
 
-        /* adds the fake return address */
-        *esp -= sizeof(int);
-        void *zero_void = 0;
-        memcpy(*esp, &zero_void, sizeof(int));
+  /* adds the fake return address */
+  *esp -= sizeof(int);
+  void *zero_void = 0;
+  memcpy(*esp, &zero_void, sizeof(int));
 
   return true;
 }
