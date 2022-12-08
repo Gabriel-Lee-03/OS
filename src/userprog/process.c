@@ -541,9 +541,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
 
-  lock_acquire(&file_lock);
-  file_seek (file, ofs);
-  lock_release(&file_lock);
   while (read_bytes > 0 || zero_bytes > 0) 
     {
       /* Calculate how to fill this page.
@@ -561,42 +558,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
         entry->f_size = page_read_bytes;
       }
 
-      /* Check if virtual page already allocated */
-      struct thread *t = thread_current ();
-      uint8_t *kpage = pagedir_get_page (t->pagedir, upage);
-      
-      if (kpage == NULL){
-        
-        /* Get a new page of memory. */
-        kpage = palloc_get_page (PAL_USER);
-        if (kpage == NULL){
-          return false;
-        }
-        
-        /* Add the page to the process's address space. */
-        if (!install_page (upage, kpage, writable)) 
-        {
-          palloc_free_page (kpage);
-          return false; 
-        }     
-        
-      } else {
-        
-        /* Check if writable flag for the page should be updated */
-        if(writable && !pagedir_is_writable(t->pagedir, upage)){
-          pagedir_set_writable(t->pagedir, upage, writable); 
-        }
-        
-      }
-
-      /* Load data into the page. */
-      lock_acquire(&file_lock);
-      if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes){
-        return false; 
-      }
-      lock_release(&file_lock);
-      memset (kpage + page_read_bytes, 0, page_zero_bytes);
-
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
@@ -613,14 +574,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp, char* file_name) 
 {
-  uint8_t *kpage;
-  bool success = false; 
-
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  if (kpage != NULL) 
-    {
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-      if (success) {
         // Task 3
         struct supp_page_table_entry* entry = new_page(((uint8_t *) PHYS_BASE) - PGSIZE, false);
         entry->no_data = false;
@@ -684,13 +637,8 @@ setup_stack (void **esp, char* file_name)
         *esp -= sizeof(int);
         void *zero_void = 0;
         memcpy(*esp, &zero_void, sizeof(int));
-        
-      }
-      else
-        palloc_free_page (kpage);
-      }
 
-  return success;
+  return true;
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel
