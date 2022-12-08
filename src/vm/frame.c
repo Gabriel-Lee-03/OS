@@ -3,6 +3,7 @@
 #include "vm/frame.h"
 #include "threads/palloc.h"
 #include "threads/thread.h"
+#include "threads/loader.h"
 #include "userprog/pagedir.h"
 
 static struct frame_table_entry* entries;
@@ -13,7 +14,7 @@ static struct lock frame_alloc_lock;
 void frame_init(void) {
     void* frame_ptr;
     struct frame_table_entry* entry;
-    entries = malloc(sizeof(*entries) * MAX_FRAME_SIZE);
+    entries = malloc(sizeof(*entries) * init_ram_pages);
     if (entries != NULL) {
         frame_ptr = palloc_get_page(PAL_USER);
         while (frame_ptr != NULL) {

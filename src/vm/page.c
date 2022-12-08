@@ -57,7 +57,6 @@ bool add_from_page_fault (void *fault_addr) {
         return false;
     }
 
-
     /* searches for the page, if it doesn't exist, return false */
     struct supp_page_table_entry *p = page_info_lookup (fault_addr);
     if (p == NULL) {
@@ -77,8 +76,12 @@ bool add_from_page_fault (void *fault_addr) {
 
 
 struct supp_page_table_entry* page_info_lookup(void *user_vaddr) {
+    if (user_vaddr > PHYS_BASE) {
+        return NULL;
+    }
+
     struct supp_page_table_entry entry;
-    entry.user_vaddr = user_vaddr;
+    entry.user_vaddr = pg_round_down(user_vaddr);
 
     struct hash_elem* result = hash_find(&thread_current()->supp_page_table, &entry.h_elem);
     if (result == NULL) {
