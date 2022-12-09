@@ -13,6 +13,7 @@ struct supp_page_table_entry* new_page(void *user_vaddr, bool read_only) {
     entry->owner = thread_current();
     entry->user_vaddr = user_vaddr;
     entry->frame_entry = NULL;
+    entry->first_sector = NOT_IN_SWAP;
     entry->read_only = read_only;
     entry->f = NULL;
     entry->f_offset = 0;
