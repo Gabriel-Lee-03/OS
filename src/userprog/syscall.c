@@ -390,7 +390,7 @@ static mapid_t sc_mmap(int fd, void* addr) {
 
   struct mmapping *map = malloc(sizeof(struct mmapping));
   lock_acquire(&file_lock);
-  off_t length = file_length(file_to_map);
+  off_t length = file_length(&file_to_map);
   lock_release(&file_lock);
 
   if (length == 0) {
