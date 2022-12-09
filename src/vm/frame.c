@@ -102,7 +102,6 @@ void frame_unlock (struct frame_table_entry *f) {
     }
 }
 
-
 void frame_release (struct frame_table_entry *f) {
     f->page_entry == NULL;
 }
