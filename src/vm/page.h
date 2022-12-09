@@ -15,15 +15,15 @@ struct supp_page_table_entry {
     struct thread* owner;
     struct frame_table_entry* frame_entry;
     block_sector_t first_sector;
-    void *user_vaddr;
-    bool no_data;       /* Not expect any data */
-    bool read_only;     /* Read-only page */
+    void *user_vaddr;           /* User virtual address*/
+    bool no_data;               /* Not expect any data */
+    bool read_only;             /* Read-only page */
 
-    struct file *f;
-    off_t f_offset;
-    off_t f_size;
+    struct file *f;             /* File */
+    off_t f_offset;             /* Offset of file */
+    off_t f_size;               /* Size of file */
 
-    struct hash_elem h_elem;
+    struct hash_elem h_elem;    /* Hash element */
 };
 
 struct supp_page_table_entry* new_page(void*, bool read_only);

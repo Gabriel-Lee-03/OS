@@ -159,11 +159,13 @@ page_fault (struct intr_frame *f)
    }
    
    if (not_present && user) {
+      /* Lazy loading */
       if (!add_from_page_fault (p)) {
          sc_exit(-1);
       }
       return;
    }
+
    // else if (user || not_present) {
    //    sc_exit (-1);
    // }

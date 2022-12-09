@@ -109,7 +109,6 @@ struct supp_page_table_entry* page_info_lookup(void *user_vaddr) {
     }
 }
 
-/* adds a page to the hash table */
 uint32_t page_hash (struct hash_elem* elem, void *aux UNUSED) {
 	struct supp_page_table_entry* entry = hash_entry(elem, struct supp_page_table_entry, h_elem);
 	return hash_int((uint32_t) entry->user_vaddr);
