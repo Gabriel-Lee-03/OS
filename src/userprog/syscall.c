@@ -504,10 +504,9 @@ static void check_mem_access(const void *vaddr)
 	if (!is_user_vaddr(vaddr)) {
 		sc_exit(-1);
 	}
+  
 	void *ptr = pagedir_get_page(thread_current()->pagedir, vaddr);
 	if (!ptr)	{
 		sc_exit(-1);
-		return 0;
 	}
-	return ptr;
 }

@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "filesys/file.h"
@@ -10,6 +11,7 @@ static bool add_page (struct supp_page_table_entry *);
 
 struct supp_page_table_entry* new_page(void *user_vaddr, bool read_only) {
     struct supp_page_table_entry* entry = malloc(sizeof(struct supp_page_table_entry));
+    ASSERT(entry != NULL);
     entry->owner = thread_current();
     entry->user_vaddr = user_vaddr;
     entry->frame_entry = NULL;
@@ -47,7 +49,9 @@ static bool add_page (struct supp_page_table_entry *p) {
         p->first_sector = NOT_IN_SWAP;
     } else if (p->f != NULL) {
         /* if the page has a file, copy the data from said file */
+        lock_acquire(&file_lock);
         off_t read = file_read_at (p->f, p->frame_entry->frame_ptr, p->f_size, p->f_offset);
+        lock_release(&file_lock);
         memset (p->frame_entry->frame_ptr + read, 0, (PGSIZE - read));
     } else {
         /* if not, add an all 0 page */

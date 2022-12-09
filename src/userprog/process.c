@@ -553,13 +553,16 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
       
-      struct supp_page_table_entry* entry = new_page(upage, !writable);
-      entry->no_data = false;
+      struct supp_page_table_entry* entry  = page_info_lookup(upage);
+      if (entry == NULL) {
+        entry = new_page(upage, !writable);
+        entry->no_data = false;
       
-      if (page_read_bytes > 0) {
-        entry->f = file;
-        entry->f_offset = ofs;
-        entry->f_size = page_read_bytes;
+        if (page_read_bytes > 0) {
+          entry->f = file;
+          entry->f_offset = ofs;
+          entry->f_size = page_read_bytes;
+        }
       }
 
       /* Check if virtual page already allocated */
@@ -624,8 +627,15 @@ setup_stack (void **esp, char* file_name)
       if (success) {
         // Task 3
         struct supp_page_table_entry* entry = new_page(((uint8_t *) PHYS_BASE) - PGSIZE, false);
+        if (entry == NULL) {
+          return false;
+        }
         entry->no_data = false;
-        
+
+        // if (!add_from_page_fault(entry)){
+        //   return false;
+        // }
+
         *esp = PHYS_BASE;
 
         // Task 2
