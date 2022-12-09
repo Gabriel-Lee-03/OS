@@ -177,7 +177,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     check_mem_access(f->esp + 2);
     fd = *(((int*)f->esp) + 1);
     addr = *(((int**)f->esp) + 2);
-    check_mem_access(addr);
+    // check_mem_access(addr);
     f->eax = (mapid_t) sc_mmap(fd, addr);
     break; 
   
