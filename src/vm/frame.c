@@ -4,36 +4,40 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "userprog/pagedir.h"
+#include "threads/loader.h"
 
-static struct frame_table_entry* entries;
-static int frame_table_size;
+static struct list entries;
 
 static struct lock frame_alloc_lock;
 
 void frame_init(void) {
-    void* frame_ptr;
-    struct frame_table_entry* entry;
-    entries = malloc(sizeof(*entries) * MAX_FRAME_SIZE);
-    if (entries != NULL) {
-        frame_ptr = palloc_get_page(PAL_USER);
-        while (frame_ptr != NULL) {
-            frame_table_size++;
-            entry = &entries[frame_table_size];
-            entry->frame_ptr = frame_ptr;
-            entry->page_entry = NULL;
-            lock_init (&entry->f_lock);
-            frame_ptr = palloc_get_page(PAL_USER);
-        }
-    }
+    list_init(&entries);
     lock_init (&frame_alloc_lock);
 }
 
 struct frame_table_entry* frame_alloc(struct supp_page_table_entry* page_entry) {
-    struct frame_table_entry* entry;
     lock_acquire (&frame_alloc_lock);
+    void *frame_ptr = palloc_get_page(PAL_USER);
 
-    for (int i = 0; i < frame_table_size; i++) {
-        entry = &entries[i];
+    if (frame_ptr != NULL) {
+        struct frame_table_entry* entry = malloc(sizeof(entry));
+        if (entry == NULL) {
+            return false;
+        }
+        // allocate frame entry
+        entry->frame_ptr = frame_ptr;
+        entry->page_entry = page_entry;
+        lock_init(&entry->f_lock);
+        lock_acquire(&entry->f_lock);
+        list_push_back(&entries, &entry->elem);
+        lock_release (&frame_alloc_lock);
+        return entry;
+    }  
+
+    for (int i = 0; i < list_size(&entries); i++) {
+        struct list_elem* curr_elem = list_pop_front(&entries);
+        struct frame_table_entry* entry = list_entry(curr_elem, struct frame_table_entry, elem);
+        list_push_back(&entries, curr_elem);
         if (!lock_try_acquire(&entry->f_lock)){
             continue;
         }
@@ -43,19 +47,15 @@ struct frame_table_entry* frame_alloc(struct supp_page_table_entry* page_entry) 
             lock_release (&frame_alloc_lock);
             return entry;
         }
-        lock_release(&entries->f_lock);
+        lock_release(&entry->f_lock);
     }
 
     /* No free frame, so need to evict a frame. */
-    static size_t loop_helper = 0;
-    for (int i = 0; i < frame_table_size * 2; i++) {
+    for (int i = 0; i < 2 * list_size(&entries); i++) {
 
-        struct frame_table_entry *entry = &entries[loop_helper];
-
-        loop_helper++;
-        if (loop_helper >= frame_table_size) {
-            loop_helper = 0;
-        }
+        struct list_elem* curr_elem = list_pop_front(&entries);
+        struct frame_table_entry* entry = list_entry(curr_elem, struct frame_table_entry, elem);
+        list_push_back(&entries, curr_elem);
 
         if (!lock_try_acquire(&entry->f_lock)){
             continue;

@@ -38,7 +38,7 @@ static mapid_t sc_mmap(int, void*);
 static void sc_munmap(mapid_t);
 static struct mmapping* get_mmapping(mapid_t);
 static struct file* get_file(int);
-static void* check_mem_access(const void *);
+static void check_mem_access(const void *);
 
 static struct mmapping {
     mapid_t mapid;
@@ -414,7 +414,7 @@ static mapid_t sc_mmap(int fd, void* addr) {
   // Page allocation
   off_t offset = 0;
   while (length > 0) {
-    struct supp_page_table_entry* entry = new_page(addr + offset);
+    struct supp_page_table_entry* entry = new_page(addr + offset, false);
     entry->f = new_file;
     entry->f_offset = offset;
     if (length > PGSIZE) {
@@ -440,7 +440,6 @@ static mapid_t sc_mmap(int fd, void* addr) {
       curr_elem = curr_elem->next;
     }
   }
-
 
   map->mapid = thread_current()->next_mapid;
   thread_current()->next_mapid++;
@@ -500,11 +499,10 @@ static struct file* get_file(int fd) {
   return list_entry(curr_elem, struct file_with_fd, elem)->file_ptr;
 }
 
-static void* check_mem_access(const void *vaddr)
+static void check_mem_access(const void *vaddr)
 {
 	if (!is_user_vaddr(vaddr)) {
 		sc_exit(-1);
-		return 0;
 	}
 	void *ptr = pagedir_get_page(thread_current()->pagedir, vaddr);
 	if (!ptr)	{

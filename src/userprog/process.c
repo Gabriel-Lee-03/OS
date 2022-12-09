@@ -22,6 +22,7 @@
 #include "threads/synch.h"
 #include "threads/malloc.h"
 #include "vm/page.h"
+#include "vm/frame.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -552,14 +553,9 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
       
-      struct supp_page_table_entry* entry = new_page(upage);
+      struct supp_page_table_entry* entry = new_page(upage, !writable);
       entry->no_data = false;
-      if (writable) {
-        entry->read_only = false;
-      }
-      else {
-        entry->read_only = true;
-      }
+      
       if (page_read_bytes > 0) {
         entry->f = file;
         entry->f_offset = ofs;
@@ -627,9 +623,8 @@ setup_stack (void **esp, char* file_name)
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success) {
         // Task 3
-        struct supp_page_table_entry* entry = new_page(((uint8_t *) PHYS_BASE) - PGSIZE);
+        struct supp_page_table_entry* entry = new_page(((uint8_t *) PHYS_BASE) - PGSIZE, false);
         entry->no_data = false;
-        entry->read_only = false;
         
         *esp = PHYS_BASE;
 

@@ -11,6 +11,7 @@ struct frame_table_entry {
     void* frame_ptr;
     struct supp_page_table_entry* page_entry;
     struct lock f_lock;
+    struct list_elem elem;
 };
 
 
