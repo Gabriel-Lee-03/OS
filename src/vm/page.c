@@ -9,6 +9,7 @@
 
 static bool add_page (struct supp_page_table_entry *);
 
+/* creates a new page */
 struct supp_page_table_entry* new_page(void *user_vaddr, bool read_only) {
     struct supp_page_table_entry* entry = malloc(sizeof(struct supp_page_table_entry));
     ASSERT(entry != NULL);
@@ -24,14 +25,17 @@ struct supp_page_table_entry* new_page(void *user_vaddr, bool read_only) {
     return entry;
 }
 
+/* removes a given page */
 void remove_page(void *user_vaddr) {
     struct supp_page_table_entry* entry = page_info_lookup(user_vaddr);
     frame_lock(entry);
+    /* frees the frame if needed */
     if (entry->frame_entry != NULL) {
         free(entry->frame_entry);
     }
     entry->frame_entry = NULL;
     frame_unlock(entry->frame_entry);
+    /* deletes to page from the hash table */
     hash_delete(&thread_current()->supp_page_table, &entry->h_elem);
     free(entry);
 }
@@ -85,8 +89,9 @@ bool add_from_page_fault (struct supp_page_table_entry *p) {
     return pagedir_set_page (thread_current()->pagedir, p->user_vaddr, p->frame_entry->frame_ptr, !p->read_only);
 }
 
-
+/* looks up the page given an address */
 struct supp_page_table_entry* page_info_lookup(void *user_vaddr) {
+    /* if it isnt a user address return NULL */
     if (user_vaddr >= PHYS_BASE) {
         return NULL;
     }
@@ -94,6 +99,7 @@ struct supp_page_table_entry* page_info_lookup(void *user_vaddr) {
     struct supp_page_table_entry entry;
     entry.user_vaddr = pg_round_down(user_vaddr);
 
+    /* try and find the page in the hash table */
     struct hash_elem* result = hash_find(&thread_current()->supp_page_table, &entry.h_elem);
     if (result == NULL) {
         return NULL;
@@ -103,6 +109,7 @@ struct supp_page_table_entry* page_info_lookup(void *user_vaddr) {
     }
 }
 
+/* adds a page to the hash table */
 uint32_t page_hash (struct hash_elem* elem, void *aux UNUSED) {
 	struct supp_page_table_entry* entry = hash_entry(elem, struct supp_page_table_entry, h_elem);
 	return hash_int((uint32_t) entry->user_vaddr);
@@ -116,11 +123,13 @@ bool page_less (const struct hash_elem *a_elem, const struct hash_elem *b_elem,
   return a_page->user_vaddr < b_page->user_vaddr;
 }
 
+/* frees a page */
 void page_free (struct hash_elem *elem, void *aux UNUSED) {
     struct supp_page_table_entry *entry = hash_entry (elem, struct supp_page_table_entry, h_elem);
     free(entry);
 }
 
+/* evicts a page */
 void
 evict_page (struct supp_page_table_entry *p) {
     pagedir_clear_page (p->owner->pagedir, p->user_vaddr);

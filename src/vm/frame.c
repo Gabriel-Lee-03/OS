@@ -4,40 +4,43 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "userprog/pagedir.h"
-#include "threads/loader.h"
 
-static struct list entries;
+static struct frame_table_entry* entries;
+static int frame_table_size;
 
 static struct lock frame_alloc_lock;
 
+/* initalises the frame table */
 void frame_init(void) {
-    list_init(&entries);
+    /* pointer to the current frame */
+    void* frame_ptr;
+    struct frame_table_entry* entry;
+    entries = malloc(sizeof(*entries) * MAX_FRAME_SIZE);
+
+    /* initalises each frame in the list */
+    if (entries != NULL) {
+        frame_ptr = palloc_get_page(PAL_USER);
+        /* while there are still frames, get the space for the next one and set its pointer */
+        while (frame_ptr != NULL) {
+            frame_table_size++;
+            entry = &entries[frame_table_size];
+            entry->frame_ptr = frame_ptr;
+            entry->page_entry = NULL;
+            lock_init (&entry->f_lock);
+            frame_ptr = palloc_get_page(PAL_USER);
+        }
+    }
     lock_init (&frame_alloc_lock);
 }
 
+/* allocates a given page a frame */
 struct frame_table_entry* frame_alloc(struct supp_page_table_entry* page_entry) {
+    struct frame_table_entry* entry;
     lock_acquire (&frame_alloc_lock);
-    void *frame_ptr = palloc_get_page(PAL_USER);
 
-    if (frame_ptr != NULL) {
-        struct frame_table_entry* entry = malloc(sizeof(entry));
-        if (entry == NULL) {
-            return false;
-        }
-        // allocate frame entry
-        entry->frame_ptr = frame_ptr;
-        entry->page_entry = page_entry;
-        lock_init(&entry->f_lock);
-        lock_acquire(&entry->f_lock);
-        list_push_back(&entries, &entry->elem);
-        lock_release (&frame_alloc_lock);
-        return entry;
-    }  
-
-    for (int i = 0; i < list_size(&entries); i++) {
-        struct list_elem* curr_elem = list_pop_front(&entries);
-        struct frame_table_entry* entry = list_entry(curr_elem, struct frame_table_entry, elem);
-        list_push_back(&entries, curr_elem);
+    /* trys to find a free frame */
+    for (int i = 0; i < frame_table_size; i++) {
+        entry = &entries[i];
         if (!lock_try_acquire(&entry->f_lock)){
             continue;
         }
@@ -47,15 +50,19 @@ struct frame_table_entry* frame_alloc(struct supp_page_table_entry* page_entry) 
             lock_release (&frame_alloc_lock);
             return entry;
         }
-        lock_release(&entry->f_lock);
+        lock_release(&entries->f_lock);
     }
 
     /* No free frame, so need to evict a frame. */
-    for (int i = 0; i < 2 * list_size(&entries); i++) {
+    static size_t loop_helper = 0;
+    for (int i = 0; i < frame_table_size * 2; i++) {
 
-        struct list_elem* curr_elem = list_pop_front(&entries);
-        struct frame_table_entry* entry = list_entry(curr_elem, struct frame_table_entry, elem);
-        list_push_back(&entries, curr_elem);
+        struct frame_table_entry *entry = &entries[loop_helper];
+
+        loop_helper++;
+        if (loop_helper >= frame_table_size) {
+            loop_helper = 0;
+        }
 
         if (!lock_try_acquire(&entry->f_lock)){
             continue;
@@ -85,6 +92,7 @@ struct frame_table_entry* frame_alloc(struct supp_page_table_entry* page_entry) 
     return NULL;
 }
 
+/* locks the frame associated with a page */
 void frame_lock (struct supp_page_table_entry* page_entry) {
     struct frame_table_entry* entry = page_entry->frame_entry;
     if (entry != NULL) {
@@ -92,11 +100,12 @@ void frame_lock (struct supp_page_table_entry* page_entry) {
     }
 }
 
+/* unlocks the given frame */
 void frame_unlock (struct frame_table_entry *f) {
     lock_release (&f->f_lock);
 }
 
-
+/* resets the given frame null so it can be reasigned */
 void frame_release (struct frame_table_entry *f) {
     f->page_entry == NULL;
 }
