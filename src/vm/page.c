@@ -10,6 +10,9 @@ static bool add_page (struct supp_page_table_entry *);
 
 struct supp_page_table_entry* new_page(void *user_vaddr, bool read_only) {
     struct supp_page_table_entry* entry = malloc(sizeof(struct supp_page_table_entry));
+    if (entry == NULL) {
+        return NULL;
+    }
     entry->owner = thread_current();
     entry->user_vaddr = user_vaddr;
     entry->frame_entry = NULL;
@@ -24,17 +27,19 @@ struct supp_page_table_entry* new_page(void *user_vaddr, bool read_only) {
 
 void remove_page(void *user_vaddr) {
     struct supp_page_table_entry* entry = page_info_lookup(user_vaddr);
+    ASSERT(entry != NULL);
     frame_lock(entry);
     if (entry->frame_entry != NULL) {
         free(entry->frame_entry);
     }
     entry->frame_entry = NULL;
-    frame_unlock(entry->frame_entry);
+    frame_unlock(entry);
     hash_delete(&thread_current()->supp_page_table, &entry->h_elem);
     free(entry);
 }
 
 static bool add_page (struct supp_page_table_entry *p) {
+    ASSERT(p != NULL);
     /* try to allocate a frame, returns false if it can't */
     p->frame_entry = frame_alloc (p);
     if (p->frame_entry == NULL) {
@@ -119,6 +124,7 @@ void page_free (struct hash_elem *elem, void *aux UNUSED) {
 
 void
 evict_page (struct supp_page_table_entry *p) {
+    ASSERT(p != NULL);
     pagedir_clear_page (p->owner->pagedir, p->user_vaddr);
     if (pagedir_is_dirty (p->owner->pagedir, p-> user_vaddr)) {
         if (!(p->f == NULL) && writable_file (p->f)) {

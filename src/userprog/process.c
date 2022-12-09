@@ -51,6 +51,9 @@ process_execute (const char *file_name)
 
   char *save_ptr;
   char *fn_copy2 = malloc(strlen(file_name) + 1);
+  if (fn_copy2 == NULL) {
+    return TID_ERROR;
+  }
   strlcpy (fn_copy2, file_name, strlen(file_name) + 1);
   char *token = strtok_r(fn_copy2, " ", &save_ptr);
 
@@ -86,6 +89,7 @@ start_process (void *file_name_)
 
   // Task 3
   hash_init(&thread_current()->supp_page_table, page_hash, page_less, NULL);
+
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -362,6 +366,9 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   char* save_ptr;
   char* fn_copy = malloc(strlen(file_name)+1);
+  if (fn_copy == NULL) {
+    return false;
+  }
   strlcpy(fn_copy, file_name, strlen(file_name)+1);
   char* token = strtok_r(fn_copy, " ", &save_ptr);
 
@@ -551,6 +558,9 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
       
       struct supp_page_table_entry* entry = new_page(upage, !writable);
+      if (entry == NULL) {
+        return false;
+      }
       entry->no_data = false;
       
       if (page_read_bytes > 0) {
@@ -578,6 +588,9 @@ setup_stack (void **esp, char* file_name)
   // Task 3
   /* Allocate page */
   struct supp_page_table_entry* entry = new_page(((uint8_t *) PHYS_BASE) - PGSIZE, false);
+  if (entry == NULL) {
+        return false;
+  }
   entry->no_data = false;
   if (!add_from_page_fault(entry)){
     return false;

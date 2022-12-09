@@ -17,6 +17,7 @@ void frame_init(void) {
     entries = malloc(sizeof(*entries) * init_ram_pages);
     if (entries != NULL) {
         frame_ptr = palloc_get_page(PAL_USER);
+        ASSERT(frame_ptr != NULL);
         while (frame_ptr != NULL) {
             frame_table_size++;
             entry = &entries[frame_table_size];
