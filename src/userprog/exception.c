@@ -158,6 +158,10 @@ page_fault (struct intr_frame *f)
       }
    }
    
+   if (p != NULL && p->read_only && write) {
+      sc_exit (-1);
+   }
+   
    if (not_present && user) {
       /* Lazy loading */
       if (!add_from_page_fault (p)) {
