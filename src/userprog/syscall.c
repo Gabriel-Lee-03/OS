@@ -414,7 +414,7 @@ static mapid_t sc_mmap(int fd, void* addr) {
   // Page allocation
   off_t offset = 0;
   while (length > 0) {
-    struct supp_page_table_entry* entry = new_page(addr + offset);
+    struct supp_page_table_entry* entry = new_page(addr + offset, false);
     entry->f = new_file;
     entry->f_offset = offset;
     if (length > PGSIZE) {

@@ -8,11 +8,12 @@
 
 static bool add_page (struct supp_page_table_entry *);
 
-struct supp_page_table_entry* new_page(void *user_vaddr) {
+struct supp_page_table_entry* new_page(void *user_vaddr, bool read_only) {
     struct supp_page_table_entry* entry = malloc(sizeof(struct supp_page_table_entry));
     entry->owner = thread_current();
     entry->user_vaddr = user_vaddr;
     entry->frame_entry = NULL;
+    entry->read_only = read_only;
     entry->f = NULL;
     entry->f_offset = 0;
     entry->f_size = 0;
@@ -39,8 +40,12 @@ static bool add_page (struct supp_page_table_entry *p) {
         return false;
     }
 
-    /* if the page has a file, copy the data from said file */
-    if (p->f != NULL) {
+    /* if the page was stored to swap, swap_in and mark first_sector as NOT_IN_SWAP */
+    if (p->first_sector != NOT_IN_SWAP) {
+        swap_in (p->frame_entry->frame_ptr, p->first_sector);
+        p->first_sector = NOT_IN_SWAP;
+    } else if (p->f != NULL) {
+        /* if the page has a file, copy the data from said file */
         off_t read = file_read_at (p->f, p->frame_entry->frame_ptr, p->f_size, p->f_offset);
         memset (p->frame_entry->frame_ptr + read, 0, (PGSIZE - read));
     } else {
@@ -48,18 +53,18 @@ static bool add_page (struct supp_page_table_entry *p) {
         memset (p->frame_entry->frame_ptr, 0, PGSIZE);
     }
 
+    lock_release (&p->frame_entry->f_lock);
+
     return true;
 }
 
-bool add_from_page_fault (void *fault_addr) {
+bool add_from_page_fault (struct supp_page_table_entry *p) {
     // if the current thread doesn't have a page table it can't handle the fault
     if (&thread_current()->supp_page_table == NULL) {
         return false;
     }
 
-
     /* searches for the page, if it doesn't exist, return false */
-    struct supp_page_table_entry *p = page_info_lookup (fault_addr);
     if (p == NULL) {
         return false;
     }
@@ -77,8 +82,12 @@ bool add_from_page_fault (void *fault_addr) {
 
 
 struct supp_page_table_entry* page_info_lookup(void *user_vaddr) {
+    if (user_vaddr >= PHYS_BASE) {
+        return NULL;
+    }
+
     struct supp_page_table_entry entry;
-    entry.user_vaddr = user_vaddr;
+    entry.user_vaddr = pg_round_down(user_vaddr);
 
     struct hash_elem* result = hash_find(&thread_current()->supp_page_table, &entry.h_elem);
     if (result == NULL) {

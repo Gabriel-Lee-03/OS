@@ -27,7 +27,8 @@ struct frame_table_entry* frame_alloc(struct supp_page_table_entry* page_entry) 
         // allocate frame entry
         entry->frame_ptr = frame_ptr;
         entry->page_entry = page_entry;
-        lock_init (&entry->f_lock);
+        lock_init(&entry->f_lock);
+        lock_acquire(&entry->f_lock);
         list_push_back(&entries, &entry->elem);
         lock_release (&frame_alloc_lock);
         return entry;
