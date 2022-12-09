@@ -96,7 +96,9 @@ void frame_lock (struct supp_page_table_entry* page_entry) {
 }
 
 void frame_unlock (struct frame_table_entry *f) {
+    if (f != NULL) {
     lock_release (&f->f_lock);
+    }
 }
 
 

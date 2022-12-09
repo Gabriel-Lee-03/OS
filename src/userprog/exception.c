@@ -7,6 +7,7 @@
 #include "vm/page.h"
 #include "userprog/syscall.h"
 #include "threads/vaddr.h"
+#include "userprog/pagedir.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -141,8 +142,7 @@ page_fault (struct intr_frame *f)
      be assured of reading CR2 before it changed). */
   intr_enable ();
 
-  /* Count page faults. */
-  page_fault_cnt++;
+
 
   /* Determine cause. */
   not_present = (f->error_code & PF_P) == 0;
@@ -169,6 +169,9 @@ page_fault (struct intr_frame *f)
    // else if (user || not_present) {
    //    sc_exit (-1);
    // }
+
+  /* Count page faults. */
+  page_fault_cnt++;
 
   printf ("Page fault at %p: %s error %s page in %s context.\n",
           fault_addr,
